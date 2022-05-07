@@ -4,6 +4,7 @@ const api = {
     createContribution: "/discord/contrib",
     isDaoRegistered: "/discord/is_dao_registered",
     discordIdentifier: "/discord/identifier",
+    isUserVerified: "/discord/is_user_verified",
   },
 };
 

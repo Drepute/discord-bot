@@ -3,6 +3,8 @@ const { SlashCommandBuilder } = require("@discordjs/builders");
 // import api from "../constants/api";
 const axios = require("axios");
 const api = require("../constants/api");
+const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("add-contribution")
@@ -13,12 +15,12 @@ module.exports = {
         .setDescription("Title of the contribution")
         .setRequired(true)
     )
-    .addIntegerOption((option) =>
+    .addNumberOption((option) =>
       option
         .setName("timetaken")
         .setDescription("Time taken in hours to complete the contribution")
         .setRequired(true)
-        .setMinValue(1)
+        .setMinValue(0)
     )
     .addStringOption((option) =>
       option
@@ -46,10 +48,11 @@ module.exports = {
     if (interaction.inGuild()) {
       const GUILDID = interaction.GUILDID;
       const userId = interaction.member.id;
+      await interaction.deferReply({ ephemeral: true });
       try {
         const title = interaction.options.getString("title");
         const description = interaction.options.getString("description");
-        const timeTaken = interaction.options.getInteger("timetaken");
+        const timeTaken = interaction.options.getNumber("timetaken");
         const link = interaction.options.getString("link");
         const type = interaction.options.getString("type");
         const data = {
@@ -60,15 +63,26 @@ module.exports = {
           link,
           time_spent: timeTaken,
         };
+        console.log("data", data);
         // todo: communicate with backend and check if user is already verified
         const res = await axios.post(
           `${api.BASE_URL}${api.ROUTES.createContribution}`,
-          data
+          data,
+          {
+            headers: {
+              "X-Authentication": INTERNAL_TOKEN,
+            },
+          }
         );
-        return interaction.reply(`adding`);
+        if (res.data.success) {
+          return interaction.editReply({
+            content: "successfully added contribution",
+            ephemeral: true,
+          });
+        }
       } catch (err) {
         console.error(err);
-        return interaction.reply({
+        return interaction.editReply({
           content: "something went wrong try again",
           ephemeral: true,
         });
