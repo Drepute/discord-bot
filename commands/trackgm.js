@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
-const { setSpecifiedChannel } = require("../totalGm");
+const setSpecifiedChannel = require("../totalGm");
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("trackgm")
