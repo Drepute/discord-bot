@@ -1,8 +1,9 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
 const { Permissions } = require("discord.js");
 const api = require("../constants/api");
-const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
 const axios = require("axios");
+const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
+const BASE_URL = process.env.BASE_URL;
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -26,7 +27,7 @@ module.exports = {
       // todo: check if this guild is already registered
       try {
         const res = await axios.get(
-          `${api.BASE_URL}${api.ROUTES.isDaoRegistered}/${guildId}`,
+          `${BASE_URL}${api.ROUTES.isDaoRegistered}/${guildId}`,
           {
             headers: {
               "X-Authentication": INTERNAL_TOKEN,
@@ -42,7 +43,7 @@ module.exports = {
         }
 
         const response = await axios.get(
-          `${api.BASE_URL}${api.ROUTES.discordIdentifier}/${guildId}`,
+          `${BASE_URL}${api.ROUTES.discordIdentifier}/${guildId}`,
           {
             headers: {
               "X-Authentication": INTERNAL_TOKEN,

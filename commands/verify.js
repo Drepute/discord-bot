@@ -3,6 +3,7 @@ const api = require("../constants/api");
 const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
 // const axios = require("axios");
 const apiClient = require("../utils/apiClient");
+const BASE_URL = process.env.BASE_URL;
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -15,7 +16,7 @@ module.exports = {
       const userId = interaction.member.id;
       try {
         const res = await apiClient.get(
-          `${api.BASE_URL}${api.ROUTES.isUserVerified}?guild_id=${guildId}&discord_user_id=${userId}`,
+          `${BASE_URL}${api.ROUTES.isUserVerified}?guild_id=${guildId}&discord_user_id=${userId}`,
           {
             headers: {
               "X-Authentication": INTERNAL_TOKEN,

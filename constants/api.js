@@ -1,5 +1,4 @@
 const api = {
-  BASE_URL: "https://staging.api.drepute.xyz/dao_tool_server",
   ROUTES: {
     createContribution: "/contrib",
     isDaoRegistered: "/discord/is_dao_registered",
@@ -9,7 +8,5 @@ const api = {
     getSigners: "/discord/signers",
   },
 };
-
-// export default api;
 
 module.exports = api;

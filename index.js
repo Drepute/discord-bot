@@ -12,6 +12,7 @@ const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
 // const deployCommands = require("./utils/deployCommands");
 // const GUILDID = process.env.GUILDID;
 const TOKEN = process.env.TOKEN;
+const BASE_URL = process.env.BASE_URL;
 // const { getEnv } = require("./utils/envHelper");
 
 // app.get("/updateCommands", (req, res) => {
@@ -46,15 +47,12 @@ for (const file of commandFiles) {
 
 client.once("ready", async () => {
   console.log("Ready!");
-  const res = await apiClient.get(
-    `${api.BASE_URL}${api.ROUTES.getAdminToken}`,
-    {
-      headers: {
-        "X-Authentication": INTERNAL_TOKEN,
-      },
-      doNotAddAuthToken: true,
-    }
-  );
+  const res = await apiClient.get(`${BASE_URL}${api.ROUTES.getAdminToken}`, {
+    headers: {
+      "X-Authentication": INTERNAL_TOKEN,
+    },
+    doNotAddAuthToken: true,
+  });
   if (res.data.success) {
     updateToken(res.data.data.token);
   }

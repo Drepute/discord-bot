@@ -2,16 +2,15 @@ const { SlashCommandBuilder } = require("@discordjs/builders");
 const axios = require("axios");
 const api = require("../constants/api");
 const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
-const apiClient = require("../utils/apiClient");
+// const apiClient = require("../utils/apiClient");
+const BASE_URL = process.env.BASE_URL;
 
-const sendMessageToAdmins = async (client, guildId) => {
-  console.log("in function");
-  const res = await apiClient.get(
-    `${api.BASE_URL}${api.ROUTES.getSigners}?guild_id=${guildId}`
-  );
-  console.log("signers", res.data);
-  await client.users.send("574336728274436117", "A new contribution added");
-};
+// const sendMessageToAdmins = async (client, guildId) => {
+//   const res = await apiClient.get(
+//     `${BASE_URL}${api.ROUTES.getSigners}?guild_id=${guildId}`
+//   );
+//   await client.users.send("574336728274436117", "A new contribution added");
+// };
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -64,7 +63,7 @@ module.exports = {
       const userId = interaction.member.id;
       try {
         const response = await axios.get(
-          `${api.BASE_URL}${api.ROUTES.isUserVerified}?guild_id=${guildId}&discord_user_id=${userId}`,
+          `${BASE_URL}${api.ROUTES.isUserVerified}?guild_id=${guildId}&discord_user_id=${userId}`,
           {
             headers: {
               "X-Authentication": INTERNAL_TOKEN,
@@ -92,12 +91,11 @@ module.exports = {
             console.log("data", data);
             // todo: communicate with backend and check if user is verified or not
             const res = await axios.post(
-              `${api.BASE_URL}${api.ROUTES.createContribution}`,
+              `${BASE_URL}${api.ROUTES.createContribution}`,
               data
             );
-            console.log("res.data in track contri", res.data);
             if (res.data.success) {
-              sendMessageToAdmins(client, guildId);
+              // sendMessageToAdmins(client, guildId);
               console.log("sending response");
               return interaction.editReply({
                 content: "successfully added contribution",
