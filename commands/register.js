@@ -19,7 +19,6 @@ module.exports = {
           ephemeral: true,
         });
       }
-      // await interaction.deferReply({ ephemeral: true });
       await interaction.deferReply({ ephemeral: true });
       // const banner = await interaction.guild.iconURL();
       // console.log("banner", banner);
@@ -32,6 +31,7 @@ module.exports = {
             headers: {
               "X-Authentication": INTERNAL_TOKEN,
             },
+            doNotAddAuthToken: true,
           }
         );
         if (res.data?.data?.exists) {

@@ -1,7 +1,8 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
-const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
-const axios = require("axios");
 const api = require("../constants/api");
+const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
+// const axios = require("axios");
+const apiClient = require("../utils/apiClient");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -13,7 +14,7 @@ module.exports = {
       const guildId = interaction.guildId;
       const userId = interaction.member.id;
       try {
-        const res = await axios.get(
+        const res = await apiClient.get(
           `${api.BASE_URL}${api.ROUTES.isUserVerified}?guild_id=${guildId}&discord_user_id=${userId}`,
           {
             headers: {
@@ -21,19 +22,17 @@ module.exports = {
             },
           }
         );
-        console.log("res is", res.data);
         if (res.data.success) {
-          const { verified, dao_uuid } = res.data.data;
+          const { verified, dao_uuid, dao_name } = res.data.data;
           if (verified) {
             return interaction.editReply({
               content: "You are already registered",
               ephemeral: true,
             });
           } else {
-            const daoId = dao_uuid;
-            if (daoId) {
+            if (dao_uuid && dao_name) {
               return interaction.editReply({
-                content: `https://app.staging.drepute.xyz/contributor/invite/${daoId}`,
+                content: `http://localhost:3000/contributor/invite/${dao_name}/${dao_uuid}`,
                 ephemeral: true,
               });
             } else {
@@ -52,7 +51,6 @@ module.exports = {
           ephemeral: true,
         });
       }
-      // todo: communicate with backend and check if user is already verified and if not verified get dao uuid from GUILDID
     } else {
       return interaction.reply(
         "Please verify yourself from the DAO discord channel"

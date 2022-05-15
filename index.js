@@ -2,6 +2,10 @@ const fs = require("node:fs");
 require("dotenv").config();
 const { Client, Collection, Intents } = require("discord.js");
 const { addGm, getNumberOfGm, getSpecifiedChannel } = require("./totalGm");
+const apiClient = require("./utils/apiClient");
+const { updateToken } = require("./utils/token");
+const api = require("./constants/api");
+const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
 // const express = require("express");
 // const app = express();
 // const port = 5000;
@@ -42,6 +46,19 @@ for (const file of commandFiles) {
 
 client.once("ready", async () => {
   console.log("Ready!");
+  const res = await apiClient.get(
+    `${api.BASE_URL}${api.ROUTES.getAdminToken}`,
+    {
+      headers: {
+        "X-Authentication": INTERNAL_TOKEN,
+      },
+      doNotAddAuthToken: true,
+    }
+  );
+  if (res.data.success) {
+    updateToken(res.data.data.token);
+  }
+
   // const guilds = await client.guilds.fetch();
   // console.log("guild are", guilds.length);
   // const guildsPromise = guilds.map((guild) => guild.fetch());
@@ -88,19 +105,17 @@ client.on("interactionCreate", async (interaction) => {
   const command = client.commands.get(interaction.commandName);
   if (!command) return;
 
-  try {
-    await command.execute(interaction);
-  } catch (error) {
-    console.error(error);
-    await interaction.reply({
-      content:
-        "There was an error while executing this command!, Please try again later",
-      ephemeral: true,
-    });
-  }
+  // try {
+  await command.execute(interaction, client);
+  // } catch (error) {
+  //   console.error(error);
+  //   await interaction.reply({
+  //     content:
+  //       "There was an error while executing this command!, Please try again later",
+  //     ephemeral: true,
+  //   });
+  // }
 });
-
-// let totalMessages = 0;
 
 let regex = new RegExp(/(?:^|\W)gm(?:$|\W)/, "i");
 
