@@ -3,7 +3,6 @@ const createAuthRefreshInterceptor = require("axios-auth-refresh");
 const { updateToken, getToken } = require("./token");
 const api = require("../constants/api");
 const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
-const BASE_URL = process.env.BASE_URL;
 
 function addAuthToken(config) {
   return !config.doNotAddAuthToken;
@@ -28,7 +27,7 @@ console.log(
 // Function that will be called to refresh authorization
 const refreshAuthLogic = (failedRequest) =>
   axios
-    .get(`${BASE_URL}${api.ROUTES.getAdminToken}`, {
+    .get(`${api.BASE_URL}${api.ROUTES.getAdminToken}`, {
       headers: {
         "X-Authentication": INTERNAL_TOKEN,
       },

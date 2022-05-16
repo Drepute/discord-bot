@@ -12,7 +12,6 @@ const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
 // const deployCommands = require("./utils/deployCommands");
 // const GUILDID = process.env.GUILDID;
 const TOKEN = process.env.TOKEN;
-const BASE_URL = process.env.BASE_URL;
 // const { getEnv } = require("./utils/envHelper");
 
 // app.get("/updateCommands", (req, res) => {
@@ -47,12 +46,15 @@ for (const file of commandFiles) {
 
 client.once("ready", async () => {
   console.log("Ready!");
-  const res = await apiClient.get(`${BASE_URL}${api.ROUTES.getAdminToken}`, {
-    headers: {
-      "X-Authentication": INTERNAL_TOKEN,
-    },
-    doNotAddAuthToken: true,
-  });
+  const res = await apiClient.get(
+    `${api.BASE_URL}${api.ROUTES.getAdminToken}`,
+    {
+      headers: {
+        "X-Authentication": INTERNAL_TOKEN,
+      },
+      doNotAddAuthToken: true,
+    }
+  );
   if (res.data.success) {
     updateToken(res.data.data.token);
   }
@@ -115,22 +117,22 @@ client.on("interactionCreate", async (interaction) => {
   // }
 });
 
-let regex = new RegExp(/(?:^|\W)gm(?:$|\W)/, "i");
+// let regex = new RegExp(/(?:^|\W)gm(?:$|\W)/, "i");
 
-client.on("messageCreate", (msg) => {
-  // if the author of message is a bot do nothing
-  if (msg.author.bot) return;
+// client.on("messageCreate", (msg) => {
+//   // if the author of message is a bot do nothing
+//   if (msg.author.bot) return;
 
-  // if the message is not sent in a server do nothing
-  if (!msg.inGuild()) return;
+//   // if the message is not sent in a server do nothing
+//   if (!msg.inGuild()) return;
 
-  const gmChannel = getSpecifiedChannel();
-  if (regex.test(msg.content) && gmChannel === msg.channelId) {
-    addGm();
-    const gms = getNumberOfGm();
-    console.log("gm are", gms.toString());
-    msg.reply(gms.toString());
-  }
-});
+//   const gmChannel = getSpecifiedChannel();
+//   if (regex.test(msg.content) && gmChannel === msg.channelId) {
+//     addGm();
+//     const gms = getNumberOfGm();
+//     console.log("gm are", gms.toString());
+//     msg.reply(gms.toString());
+//   }
+// });
 
 client.login(TOKEN);

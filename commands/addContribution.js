@@ -3,11 +3,10 @@ const axios = require("axios");
 const api = require("../constants/api");
 const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
 // const apiClient = require("../utils/apiClient");
-const BASE_URL = process.env.BASE_URL;
 
 // const sendMessageToAdmins = async (client, guildId) => {
 //   const res = await apiClient.get(
-//     `${BASE_URL}${api.ROUTES.getSigners}?guild_id=${guildId}`
+//     `${api.BASE_URL}${api.ROUTES.getSigners}?guild_id=${guildId}`
 //   );
 //   await client.users.send("574336728274436117", "A new contribution added");
 // };
@@ -63,7 +62,7 @@ module.exports = {
       const userId = interaction.member.id;
       try {
         const response = await axios.get(
-          `${BASE_URL}${api.ROUTES.isUserVerified}?guild_id=${guildId}&discord_user_id=${userId}`,
+          `${api.BASE_URL}${api.ROUTES.isUserVerified}?guild_id=${guildId}&discord_user_id=${userId}`,
           {
             headers: {
               "X-Authentication": INTERNAL_TOKEN,
@@ -91,7 +90,7 @@ module.exports = {
             console.log("data", data);
             // todo: communicate with backend and check if user is verified or not
             const res = await axios.post(
-              `${BASE_URL}${api.ROUTES.createContribution}`,
+              `${api.BASE_URL}${api.ROUTES.createContribution}`,
               data
             );
             if (res.data.success) {
