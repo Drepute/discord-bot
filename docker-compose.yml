@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  discord-bot-server:
+    container_name: discord-bot-server
+    image: discord-bot-server
+    environment:
+      - NODE_ENV=dev
+      - AWS_DEFAULT_REGION=us-east-1
+      - CLIENTID=<CLIENTID>
+      - GUILDID=<GUILDID>
+      - TOKEN=<TOKEN>
+      - INTERNAL_TOKEN=<INTERNAL_TOKEN>
+      - DEPLOY_COMMANDS=true
+    entrypoint: node index.js
+    networks:
+      - service_mesh
+
+networks:
+  service_mesh:
+    external: true
