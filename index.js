@@ -7,6 +7,7 @@ const { updateToken } = require("./utils/token");
 const api = require("./constants/api");
 const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
 const deployCommands = require("./utils/deployCommands");
+const deployCommandsToAllServers = require("./utils/deployCommandToAllServers"); 
 // const express = require("express");
 // const app = express();
 // const port = 5000;
@@ -48,7 +49,7 @@ for (const file of commandFiles) {
 client.once("ready", async () => {
   if (process.env.DEPLOY_COMMANDS === 'true') {
     if (process.env.NODE_ENV === "production") {
-      deployCommands();
+      deployCommandsToAllServers();
     } else {
       const GUILDID = process.env.GUILDID;
       deployCommands(GUILDID);
