@@ -7,10 +7,10 @@ services:
     environment:
       - NODE_ENV=dev
       - AWS_DEFAULT_REGION=us-east-1
-      - CLIENTID=968825110075166751
-      - GUILDID=968826095166185492
-      - TOKEN=OTY4ODI1MTEwMDc1MTY2NzUx.Ymkesg.ZkewsFdf9ZStM1uQH7TVRZPutNs
-      - INTERNAL_TOKEN=7cd59775-1eef-4e98-b9e5-ae224714b0af
+      - CLIENTID=<CLIENTID>
+      - GUILDID=<GUILDID>
+      - TOKEN=<TOKEN>
+      - INTERNAL_TOKEN=<INTERNAL_TOKEN>
       - DEPLOY_COMMANDS=true
     entrypoint: node index.js
     networks:
