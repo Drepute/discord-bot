@@ -7,7 +7,7 @@ const path = require("path");
 const CLIENTID = process.env.CLIENTID;
 const TOKEN = process.env.TOKEN;
 
-const deployCommands = (GUILDID, commandsToDeploy = []) => {
+const deployCommandsToAllServers = () => {
   const commands = [];
   const commandFiles = fs
     .readdirSync(path.resolve(__dirname, "../commands"))
@@ -15,19 +15,15 @@ const deployCommands = (GUILDID, commandsToDeploy = []) => {
 
   for (const file of commandFiles) {
     const command = require(`../commands/${file}`);
-    if (
-      !commandsToDeploy?.length ||
-      commandsToDeploy?.includes(command.data.name)
-    ) {
-      commands.push(command.data.toJSON());
-    }
+    commands.push(command.data.toJSON());
   }
 
   const rest = new REST({ version: "9" }).setToken(TOKEN);
 
   rest
-    .put(Routes.applicationGuildCommands(CLIENTID, GUILDID), { body: commands })
+    .put(Routes.applicationCommands(CLIENTID), { body: commands })
     .then(() => console.log("Successfully registered application commands."))
     .catch(console.error);
 };
-module.exports = deployCommands;
+
+module.exports = deployCommandsToAllServers;
