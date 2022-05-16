@@ -6,6 +6,7 @@ const apiClient = require("./utils/apiClient");
 const { updateToken } = require("./utils/token");
 const api = require("./constants/api");
 const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
+const deployCommands = require("./utils/deployCommands");
 // const express = require("express");
 // const app = express();
 // const port = 5000;
@@ -45,6 +46,14 @@ for (const file of commandFiles) {
 }
 
 client.once("ready", async () => {
+  if (process.env.DEPLOY_COMMANDS === 'true') {
+    if (process.env.NODE_ENV === "production") {
+      deployCommands();
+    } else {
+      const GUILDID = process.env.GUILDID;
+      deployCommands(GUILDID);
+    }
+  }
   console.log("Ready!");
   const res = await apiClient.get(
     `${api.BASE_URL}${api.ROUTES.getAdminToken}`,
