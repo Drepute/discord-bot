@@ -31,8 +31,10 @@ module.exports = {
             });
           } else {
             if (dao_uuid && dao_name) {
+              const link = `${api.DAO_TOOL_BASE_URL}/contributor/invite/${dao_name}/${dao_uuid}`;
+              const encodedLink = encodeURI(link);
               return interaction.editReply({
-                content: `${api.DAO_TOOL_BASE_URL}/contributor/invite/${dao_name}/${dao_uuid}`,
+                content: encodedLink,
                 ephemeral: true,
               });
             } else {
