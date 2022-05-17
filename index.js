@@ -1,13 +1,13 @@
 const fs = require("node:fs");
 require("dotenv").config();
 const { Client, Collection, Intents } = require("discord.js");
-const { addGm, getNumberOfGm, getSpecifiedChannel } = require("./totalGm");
+// const { addGm, getNumberOfGm, getSpecifiedChannel } = require("./totalGm");
 const apiClient = require("./utils/apiClient");
 const { updateToken } = require("./utils/token");
 const api = require("./constants/api");
 const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
 const deployCommands = require("./utils/deployCommands");
-const deployCommandsToAllServers = require("./utils/deployCommandToAllServers"); 
+const deployCommandsToAllServers = require("./utils/deployCommandToAllServers");
 // const express = require("express");
 // const app = express();
 // const port = 5000;
@@ -47,7 +47,7 @@ for (const file of commandFiles) {
 }
 
 client.once("ready", async () => {
-  if (process.env.DEPLOY_COMMANDS === 'true') {
+  if (process.env.DEPLOY_COMMANDS === "true") {
     if (process.env.NODE_ENV === "production") {
       deployCommandsToAllServers();
     } else {

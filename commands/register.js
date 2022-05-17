@@ -23,7 +23,7 @@ module.exports = {
       // const banner = await interaction.guild.iconURL();
       // console.log("banner", banner);
       const guildId = interaction.guildId;
-      // todo: check if this guild is already registered
+      const userId = interaction.member.id;
       try {
         const res = await axios.get(
           `${api.BASE_URL}${api.ROUTES.isDaoRegistered}/${guildId}`,
@@ -41,21 +41,19 @@ module.exports = {
           });
         }
 
-        const response = await axios.get(
-          `${api.BASE_URL}${api.ROUTES.discordIdentifier}/${guildId}`,
-          {
-            headers: {
-              "X-Authentication": INTERNAL_TOKEN,
-            },
-          }
-        );
+        // const response = await axios.get(
+        //   `${api.BASE_URL}${api.ROUTES.discordIdentifier}/${guildId}`,
+        //   {
+        //     headers: {
+        //       "X-Authentication": INTERNAL_TOKEN,
+        //     },
+        //   }
+        // );
 
-        if (response.data.success) {
-          await interaction.editReply({
-            content: `https://staging.app.drepute.xyz/onboard/dao?discord_identifier=${response?.data?.data?.uuid}`,
-            ephemeral: true,
-          });
-        }
+        await interaction.editReply({
+          content: `https://staging.app.drepute.xyz/onboard/dao?guild_id=${guildId}&discord_user_id=${userId}`,
+          ephemeral: true,
+        });
         return;
       } catch (err) {
         return interaction.editReply({
