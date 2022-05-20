@@ -1,8 +1,10 @@
 const api = {
   BASE_URL:
-    process.env.NODE_ENV !== "production"
+    process.env.NODE_ENV === "production"
+      ? "https://api.drepute.xyz/dao_tool_server"
+      : process.env.NODE_ENV === "staging"
       ? "https://staging.api.drepute.xyz/dao_tool_server"
-      : "https://api.drepute.xyz/dao_tool_server",
+      : "https://staging.api.drepute.xyz/dao_tool_server",
   ROUTES: {
     createContribution: "/contrib",
     isDaoRegistered: "/discord/is_dao_registered",
@@ -12,9 +14,11 @@ const api = {
     getSigners: "/discord/signers",
   },
   DAO_TOOL_BASE_URL:
-    process.env.NODE_ENV !== "production"
+    process.env.NODE_ENV === "production"
+      ? "https://app.drepute.xyz"
+      : process.env.NODE_ENV === "staging"
       ? "https://staging.app.drepute.xyz"
-      : "https://app.drepute.xyz",
+      : "http://localhost:3000",
 };
 
 module.exports = api;

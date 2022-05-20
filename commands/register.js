@@ -51,7 +51,7 @@ module.exports = {
         // );
 
         await interaction.editReply({
-          content: `https://staging.app.drepute.xyz/onboard/dao?guild_id=${guildId}&discord_user_id=${userId}`,
+          content: `${api.DAO_TOOL_BASE_URL}/onboard/dao?guild_id=${guildId}&discord_user_id=${userId}`,
           ephemeral: true,
         });
         return;

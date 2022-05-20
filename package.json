@@ -5,14 +5,16 @@
   "author": "Shaurya Vardhan Singh <gsshaurya@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "start": "pm2 start index.js",
+    "start": "env-cmd -f .env pm2 start index.js",
     "start:staging": "env-cmd -f .env.staging pm2 start index.js",
     "start:prod": "env-cmd -f .env.production pm2 start index.js",
     "monitor": "pm2 monit",
     "deploy-commands": "node deploy-commands.js",
     "deploy-commands-prod": "node deploy-commands-prod.js",
     "stop": "pm2 stop index.js",
-    "restart": "pm2 restart index.js",
+    "restart": "env-cmd -f .env pm2 restart index.js",
+    "restart:staging": "env-cmd -f .env.staging pm2 restart index.js",
+    "restart:prod": "env-cmd -f .env.production pm2 restart index.js",
     "restart-app": "yarn deploy-commands && yarn restart && yarn monitor"
   },
   "dependencies": {
