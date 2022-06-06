@@ -8,24 +8,14 @@ const api = require("./constants/api");
 const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
 const deployCommands = require("./utils/deployCommands");
 const deployCommandsToAllServers = require("./utils/deployCommandToAllServers");
-// const express = require("express");
-// const app = express();
-// const port = 5000;
-// const deployCommands = require("./utils/deployCommands");
+const clearCommandsInGuild = require("./utils/clearCommandsInGuild");
+const express = require("express");
+const app = express();
+const port = 5000;
 // const GUILDID = process.env.GUILDID;
-const TOKEN = process.env.TOKEN;
 // const { getEnv } = require("./utils/envHelper");
-
-// app.get("/updateCommands", (req, res) => {
-//   // const GUILDID = req.body.GUILDID;
-//   // const commands = req.body.commands;
-//   deployCommands(GUILDID, ["verify"]);
-//   res.send("Hello World!");
-// });
-
-// app.listen(port, () => {
-//   console.log(`Example app listening on port ${port}`);
-// });
+const TOKEN = process.env.TOKEN;
+app.use(express.json());
 
 const client = new Client({
   intents: [
@@ -47,14 +37,14 @@ for (const file of commandFiles) {
 }
 
 client.once("ready", async () => {
-  if (process.env.DEPLOY_COMMANDS === "true") {
-    if (process.env.NODE_ENV === "production") {
-      deployCommandsToAllServers();
-    } else {
-      const GUILDID = process.env.GUILDID;
-      deployCommands(GUILDID);
-    }
-  }
+  // if (process.env.DEPLOY_COMMANDS === "true") {
+  //   if (process.env.NODE_ENV === "production") {
+  //     deployCommandsToAllServers();
+  //   } else {
+  //     const GUILDID = process.env.GUILDID;
+  //     deployCommands(GUILDID);
+  //   }
+  // }
   console.log("Ready!");
   const res = await apiClient.get(
     `${api.BASE_URL}${api.ROUTES.getAdminToken}`,
@@ -145,4 +135,89 @@ client.on("interactionCreate", async (interaction) => {
 //   }
 // });
 
+client.on("guildCreate", (guild) => {
+  deployCommands(guild.id);
+});
+
+client.on("guildDelete", (guild) => {
+  // TODO: remove guild from dao tool database
+});
+
 client.login(TOKEN);
+
+app.post("/toggleBot", (req, res) => {
+  const guildId = req.body.guild_id;
+  // const commands = req.body.commands;
+  const disableBot = req.body.disable_bot;
+  console.log("klmadlkmd", guildId, disableBot);
+  if (disableBot) {
+    clearCommandsInGuild(guildId);
+  } else {
+    deployCommands(guildId);
+  }
+  res.json({
+    success: true,
+    data: {},
+  });
+});
+
+app.get("/details/:guild_id", async (req, res) => {
+  const guildId = req.params.guild_id;
+  const guilds = await client.guilds.fetch();
+  console.log("guild are", guilds, guildId);
+  const guildsPromise = guilds.map((guild) => guild.fetch());
+  const guildsResolved = await Promise.all(guildsPromise);
+  let selectedGuild = null;
+  for (let i = 0; i < guildsResolved.length; i++) {
+    if (guildId === guildsResolved[i].id) {
+      selectedGuild = guildsResolved[i];
+      break;
+    }
+  }
+  if (selectedGuild) {
+    const guildName = selectedGuild.name;
+    const guildIconUrl = await selectedGuild.iconURL();
+    return res.json({
+      success: true,
+      data: {
+        guild_name: guildName,
+        guild_icon_url: guildIconUrl,
+      },
+    });
+  } else {
+    return res.json({
+      success: true,
+      message: "No guild with this id found",
+    });
+  }
+});
+
+// app.get("/getMessages", async (req, res) => {
+//   const channel = await client.channels.fetch("982195140221366305");
+//   // const messages = await channel.messages.fetch({ limit: 100 });
+
+//   let messages = [];
+
+//   // Create message pointer
+//   let message = await channel.messages
+//     .fetch({ limit: 1 })
+//     .then((messagePage) => (messagePage.size === 1 ? messagePage.at(0) : null));
+
+//   while (message) {
+//     await channel.messages
+//       .fetch({ limit: 2, before: message.id })
+//       .then((messagePage) => {
+//         messagePage.forEach((msg) => messages.push(msg));
+
+//         // Update our message pointer to be last message in page of messages
+//         message =
+//           0 < messagePage.size ? messagePage.at(messagePage.size - 1) : null;
+//       });
+//   }
+//   console.log("messages are ", messages.length);
+//   res.send(messages);
+// });
+
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`);
+});
