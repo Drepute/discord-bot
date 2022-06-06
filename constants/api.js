@@ -3,8 +3,8 @@ const api = {
     process.env.NODE_ENV === "production"
       ? "https://api.drepute.xyz/dao_tool_server"
       : process.env.NODE_ENV === "staging"
-      ? "https://staging.api.drepute.xyz/dao_tool_server"
-      : "https://staging.api.drepute.xyz/dao_tool_server",
+      ? "https://test-staging.api.drepute.xyz/dao_tool_server"
+      : "https://test-staging.api.drepute.xyz/dao_tool_server",
   ROUTES: {
     createContribution: "/contrib",
     isDaoRegistered: "/discord/is_dao_registered",
