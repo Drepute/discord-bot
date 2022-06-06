@@ -66,6 +66,7 @@ client.once("ready", async () => {
     }
   );
   if (res.data.success) {
+    console.log("access token is ", res.data.data.token);
     updateToken(res.data.data.token);
   }
 
