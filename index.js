@@ -10,12 +10,12 @@ const deployCommands = require("./utils/deployCommands");
 const deployCommandsToAllServers = require("./utils/deployCommandToAllServers");
 const clearCommandsInGuild = require("./utils/clearCommandsInGuild");
 const express = require("express");
+const cors = require("cors");
 const app = express();
 const port = 5000;
 // const GUILDID = process.env.GUILDID;
 // const { getEnv } = require("./utils/envHelper");
 const TOKEN = process.env.TOKEN;
-app.use(express.json());
 
 const client = new Client({
   intents: [
@@ -193,6 +193,10 @@ app.get("/details/:guild_id", async (req, res) => {
   }
 });
 
+app.get("/ping", (req, res) => {
+  res.status(200).send({ status: "success" });
+});
+
 // app.get("/getMessages", async (req, res) => {
 //   const channel = await client.channels.fetch("982195140221366305");
 //   // const messages = await channel.messages.fetch({ limit: 100 });
@@ -218,6 +222,9 @@ app.get("/details/:guild_id", async (req, res) => {
 //   console.log("messages are ", messages.length);
 //   res.send(messages);
 // });
+
+app.use(express.json());
+app.use(cors());
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
