@@ -9,10 +9,13 @@ const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
 const deployCommands = require("./utils/deployCommands");
 const deployCommandsToAllServers = require("./utils/deployCommandToAllServers");
 const clearCommandsInGuild = require("./utils/clearCommandsInGuild");
-const express = require("express");
 const cors = require("cors");
+const express = require("express");
+
 const app = express();
 const port = 5000;
+const BASE_URL = "/discord_bot";
+
 // const GUILDID = process.env.GUILDID;
 // const { getEnv } = require("./utils/envHelper");
 const TOKEN = process.env.TOKEN;
@@ -146,7 +149,7 @@ client.on("guildDelete", (guild) => {
 
 client.login(TOKEN);
 
-app.post("/toggleBot", (req, res) => {
+app.post(`${BASE_URL}/toggleBot`, (req, res) => {
   const guildId = req.body.guild_id;
   // const commands = req.body.commands;
   const disableBot = req.body.disable_bot;
@@ -162,7 +165,7 @@ app.post("/toggleBot", (req, res) => {
   });
 });
 
-app.get("/details/:guild_id", async (req, res) => {
+app.get(`${BASE_URL}/details/:guild_id`, async (req, res) => {
   const guildId = req.params.guild_id;
   const guilds = await client.guilds.fetch();
   console.log("guild are", guilds, guildId);
@@ -193,7 +196,7 @@ app.get("/details/:guild_id", async (req, res) => {
   }
 });
 
-app.get("/ping", (req, res) => {
+app.get(`${BASE_URL}/ping`, (req, res) => {
   res.status(200).send({ status: "success" });
 });
 
