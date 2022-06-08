@@ -7,7 +7,7 @@ const path = require("path");
 const CLIENTID = process.env.CLIENTID;
 const TOKEN = process.env.TOKEN;
 
-const deployCommands = (GUILDID, commandsToDeploy = []) => {
+const deployCommands = async (GUILDID, commandsToDeploy = []) => {
   const commands = [];
   const commandFiles = fs
     .readdirSync(path.resolve(__dirname, "../commands"))
@@ -25,9 +25,15 @@ const deployCommands = (GUILDID, commandsToDeploy = []) => {
 
   const rest = new REST({ version: "9" }).setToken(TOKEN);
 
-  rest
-    .put(Routes.applicationGuildCommands(CLIENTID, GUILDID), { body: commands })
-    .then(() => console.log("Successfully registered application commands."))
-    .catch(console.error);
+  try {
+    await rest.put(Routes.applicationGuildCommands(CLIENTID, GUILDID), {
+      body: commands,
+    });
+    console.log("Successfully registered application commands.");
+    return true;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
 };
 module.exports = deployCommands;

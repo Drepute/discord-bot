@@ -149,18 +149,21 @@ client.on("guildDelete", (guild) => {
 
 client.login(TOKEN);
 
-app.post(`${BASE_URL}/toggleBot`, (req, res) => {
+app.post(`${BASE_URL}/toggleBot`, async (req, res) => {
   const guildId = req.body.guild_id;
   // const commands = req.body.commands;
   const disableBot = req.body.disable_bot;
-  console.log("klmadlkmd", guildId, disableBot);
+  // console.log("in toggle bot", guildId, disableBot);
+  let updateCommandResponse;
+
   if (disableBot) {
-    clearCommandsInGuild(guildId);
+    updateCommandResponse = await clearCommandsInGuild(guildId);
   } else {
-    deployCommands(guildId);
+    updateCommandResponse = await deployCommands(guildId);
   }
+
   res.json({
-    success: true,
+    success: updateCommandResponse,
     data: {},
   });
 });
