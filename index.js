@@ -139,6 +139,9 @@ client.on("interactionCreate", async (interaction) => {
 //   }
 // });
 
+app.use(express.json());
+app.use(cors());
+
 client.on("guildCreate", (guild) => {
   deployCommands(guild.id);
 });
@@ -229,8 +232,40 @@ app.get(`${BASE_URL}/ping`, (req, res) => {
 //   res.send(messages);
 // });
 
-app.use(express.json());
-app.use(cors());
+app.post(`${BASE_URL}/removeBot`, async (req, res) => {
+  const guildId = req.body.guild_id;
+  const guilds = await client.guilds.fetch();
+  const guildsPromise = guilds.map((guild) => guild.fetch());
+  const guildsResolved = await Promise.all(guildsPromise);
+  let selectedGuild = null;
+  for (let i = 0; i < guildsResolved.length; i++) {
+    if (guildId === guildsResolved[i].id) {
+      selectedGuild = guildsResolved[i];
+      break;
+    }
+  }
+  console.log(selectedGuild);
+  if (selectedGuild) {
+    try {
+      await selectedGuild.leave();
+      return res.json({
+        success: true,
+        data: {},
+      });
+    } catch (error) {
+      console.log("error ", error);
+      return res.json({
+        success: false,
+        data: {},
+      });
+    }
+  } else {
+    return res.json({
+      success: true,
+      message: "No guild with this id found",
+    });
+  }
+});
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
