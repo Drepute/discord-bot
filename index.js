@@ -156,7 +156,7 @@ app.post(`${BASE_URL}/toggleBot`, cors(), async (req, res) => {
   const guildId = req.body.guild_id;
   // const commands = req.body.commands;
   const disableBot = req.body.disable_bot;
-  // console.log("in toggle bot", guildId, disableBot);
+  console.log("in toggle bot", guildId, disableBot);
   let updateCommandResponse;
 
   if (disableBot) {
