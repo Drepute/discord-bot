@@ -11,6 +11,7 @@ const deployCommandsToAllServers = require("./utils/deployCommandToAllServers");
 const clearCommandsInGuild = require("./utils/clearCommandsInGuild");
 const cors = require("cors");
 const express = require("express");
+const removeMapping = require("./utils/removeMapping");
 
 const app = express();
 const port = 5000;
@@ -147,7 +148,7 @@ client.on("guildCreate", (guild) => {
 });
 
 client.on("guildDelete", (guild) => {
-  // TODO: remove guild from dao tool database
+  removeMapping(guild.id);
 });
 
 client.login(TOKEN);
