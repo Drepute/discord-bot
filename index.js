@@ -17,8 +17,6 @@ const app = express();
 const port = 5000;
 const BASE_URL = "/discord_bot";
 
-// const GUILDID = process.env.GUILDID;
-// const { getEnv } = require("./utils/envHelper");
 const TOKEN = process.env.TOKEN;
 
 const client = new Client({
@@ -26,8 +24,12 @@ const client = new Client({
     Intents.FLAGS.GUILDS,
     Intents.FLAGS.GUILD_MESSAGES,
     Intents.FLAGS.DIRECT_MESSAGES,
+    // Intents.FLAGS.GUILD_SCHEDULED_EVENTS,
   ],
 });
+
+const db = require("./db");
+db.sequelize.sync();
 
 const commandFiles = fs
   .readdirSync("./commands")
@@ -63,50 +65,12 @@ client.once("ready", async () => {
     console.log("access token is ", res.data.data.token);
     updateToken(res.data.data.token);
   }
-
-  // const guilds = await client.guilds.fetch();
-  // console.log("guild are", guilds.length);
-  // const guildsPromise = guilds.map((guild) => guild.fetch());
-  // const guildsResolved = await Promise.all(guildsPromise);
-  // for (let i = 0; i < guildsResolved.length; i++) {
-  //   const commands = await guildsResolved[i].commands.fetch();
-  //   console.log("command", typeof commands, commands);
-  //   const registerCommand = commands.find(
-  //     (command) => command.name === "register"
-  //   );
-
-  //   if (!client.application?.owner) await client.application?.fetch();
-
-  //   // const command = registerCommand;
-  //   const command = await client.guilds.cache
-  //     .get(guildsResolved[i].id)
-  //     ?.commands.fetch(registerCommand.id);
-
-  //   const permissions = [
-  //     {
-  //       id: guildsResolved[i].ownerId,
-  //       type: "USER",
-  //       permission: true,
-  //     },
-  //   ];
-
-  //   await command.permissions.add({ permissions });
-  // }
-  // let roles = [];
-  // guilds.map(async (guildTemp) => {
-  //   const guild = await guildTemp.fetch();
-  //   const role = await guild.roles.fetch();
-  //   console.log("role id", role);
-  //   roles = [...roles, ...role];
-  // });
-  // console.log("guilds are", guilds);
-  // const x = roles.map(role)
-  // console.log("roles are", roles);
 });
 
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand()) return;
-
+  console.log("interaction is", interaction.commandName);
+  // if(interaction.)
   const command = client.commands.get(interaction.commandName);
   if (!command) return;
 
@@ -139,9 +103,87 @@ client.on("interactionCreate", async (interaction) => {
 //     msg.reply(gms.toString());
 //   }
 // });
+// client.on("guildScheduledEventUpdate", async (oldEvent, newEvent) => {
+//   console.log("old event", oldEvent);
+//   console.log("new event", newEvent);
+// });
 
-app.use(express.json());
-app.use(cors());
+// client.on("guildScheduledEventCreate", async (event) => {
+//   console.log("event created", event);
+// });
+// app.get("/getMessages", async (req, res) => {
+//   const channel = await client.channels.fetch("982195140221366305");
+//   // const messages = await channel.messages.fetch({ limit: 100 });
+
+//   let messages = [];
+
+//   // Create message pointer
+//   let message = await channel.messages
+//     .fetch({ limit: 1 })
+//     .then((messagePage) => (messagePage.size === 1 ? messagePage.at(0) : null));
+
+//   while (message) {
+//     await channel.messages
+//       .fetch({ limit: 2, before: message.id })
+//       .then((messagePage) => {
+//         messagePage.forEach((msg) => messages.push(msg));
+
+//         // Update our message pointer to be last message in page of messages
+//         message =
+//           0 < messagePage.size ? messagePage.at(messagePage.size - 1) : null;
+//       });
+//   }
+//   console.log("messages are ", messages.length);
+//   res.send(messages);
+// });
+// const guild = await client.guilds.fetch("983416100677099602");
+// // console.log("guild id is", guild);
+// await guild.scheduledEvents.create({
+//   name: "test event",
+//   scheduledStartTime: new Date(),
+//   privacyLevel: 2,
+//   entityType: 2,
+//   channel: "983416100677099606",
+// });
+
+// const guilds = await client.guilds.fetch();
+// console.log("guild are", guilds.length);
+// const guildsPromise = guilds.map((guild) => guild.fetch());
+// const guildsResolved = await Promise.all(guildsPromise);
+// for (let i = 0; i < guildsResolved.length; i++) {
+//   const commands = await guildsResolved[i].commands.fetch();
+//   console.log("command", typeof commands, commands);
+//   const registerCommand = commands.find(
+//     (command) => command.name === "register"
+//   );
+
+//   if (!client.application?.owner) await client.application?.fetch();
+
+//   // const command = registerCommand;
+//   const command = await client.guilds.cache
+//     .get(guildsResolved[i].id)
+//     ?.commands.fetch(registerCommand.id);
+
+//   const permissions = [
+//     {
+//       id: guildsResolved[i].ownerId,
+//       type: "USER",
+//       permission: true,
+//     },
+//   ];
+
+//   await command.permissions.add({ permissions });
+// }
+// let roles = [];
+// guilds.map(async (guildTemp) => {
+//   const guild = await guildTemp.fetch();
+//   const role = await guild.roles.fetch();
+//   console.log("role id", role);
+//   roles = [...roles, ...role];
+// });
+// console.log("guilds are", guilds);
+// const x = roles.map(role)
+// console.log("roles are", roles);
 
 client.on("guildCreate", (guild) => {
   deployCommands(guild.id);
@@ -152,6 +194,9 @@ client.on("guildDelete", (guild) => {
 });
 
 client.login(TOKEN);
+
+app.use(express.json());
+app.use(cors());
 
 app.post(`${BASE_URL}/toggleBot`, cors(), async (req, res) => {
   const guildId = req.body.guild_id;
@@ -206,32 +251,6 @@ app.get(`${BASE_URL}/details/:guild_id`, async (req, res) => {
 app.get(`${BASE_URL}/ping`, (req, res) => {
   res.status(200).send({ status: "success" });
 });
-
-// app.get("/getMessages", async (req, res) => {
-//   const channel = await client.channels.fetch("982195140221366305");
-//   // const messages = await channel.messages.fetch({ limit: 100 });
-
-//   let messages = [];
-
-//   // Create message pointer
-//   let message = await channel.messages
-//     .fetch({ limit: 1 })
-//     .then((messagePage) => (messagePage.size === 1 ? messagePage.at(0) : null));
-
-//   while (message) {
-//     await channel.messages
-//       .fetch({ limit: 2, before: message.id })
-//       .then((messagePage) => {
-//         messagePage.forEach((msg) => messages.push(msg));
-
-//         // Update our message pointer to be last message in page of messages
-//         message =
-//           0 < messagePage.size ? messagePage.at(messagePage.size - 1) : null;
-//       });
-//   }
-//   console.log("messages are ", messages.length);
-//   res.send(messages);
-// });
 
 app.post(`${BASE_URL}/removeBot`, async (req, res) => {
   const guildId = req.body.guild_id;
