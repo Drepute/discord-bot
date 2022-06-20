@@ -15,9 +15,9 @@ const api = {
   },
   DAO_TOOL_BASE_URL:
     process.env.NODE_ENV === "production"
-      ? "https://app.drepute.xyz"
+      ? "https://app.rep3.gg"
       : process.env.NODE_ENV === "staging"
-      ? "https://staging.app.drepute.xyz"
+      ? "https://staging.app.rep3.gg"
       : "http://localhost:3000",
 };
 
