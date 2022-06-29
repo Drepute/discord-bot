@@ -3,11 +3,10 @@ const {
   Permissions,
   MessageActionRow,
   MessageSelectMenu,
-  MessageEmbed,
   Intents,
   Client,
 } = require("discord.js");
-const { getTrackableChannels } = require("../utils/trackvc");
+const { getAllActiveEvents } = require("../utils/trackvc");
 // const client = require("../index");
 
 const client = new Client({
@@ -21,20 +20,8 @@ const client = new Client({
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName("start")
-    .setDescription("Start tracking members in a voice call")
-    .addStringOption((option) =>
-      option
-        .setName("title")
-        .setDescription("Title of the call")
-        .setRequired(true)
-    )
-    .addIntegerOption((option) =>
-      option
-        .setName("duration")
-        .setDescription("Duration of the call in minutes")
-        .setMinValue(1)
-    ),
+    .setName("end")
+    .setDescription("End tracking members in a voice call"),
   async execute(interaction) {
     if (interaction.inGuild()) {
       if (
@@ -42,28 +29,23 @@ module.exports = {
       ) {
         return interaction.reply({
           content:
-            "Please contact the discord server administrator to start tracking",
+            "Please contact the discord server administrator to end tracking",
           ephemeral: true,
         });
       }
       await interaction.deferReply({ ephemeral: true });
-      // const banner = await interaction.guild.iconURL();
-      const eventTitle = interaction.options.getString("title");
-      const eventDuration = interaction.options.getInteger("duration");
-
-      // await interaction.editReply({
-      //   content: `Your inputs are: ${eventTitle}, ${eventDuration}`,
-      // });
 
       const guildId = interaction.guildId;
       // const userId = interaction.member.id;
 
       let options;
       try {
-        const guild = interaction.guild;
-        const vcs = await getTrackableChannels(guild);
-        options = vcs.map((channel) => {
-          return { label: channel.name, value: channel.id };
+        const events = await getAllActiveEvents();
+        options = events.map((event) => {
+          return {
+            label: `[${event.channelName}] ${event.title}`,
+            value: `${event.id}`,
+          };
         });
       } catch (err) {
         console.error(err);
@@ -73,22 +55,14 @@ module.exports = {
       try {
         const row = new MessageActionRow().addComponents(
           new MessageSelectMenu()
-            .setCustomId("voice-select")
+            .setCustomId("end-voice-select")
             .setPlaceholder("Nothing selected")
             .addOptions(options)
         );
-        const embed = new MessageEmbed()
-          .setColor("#0099ff")
-          .setTitle(`${eventTitle}`)
-          .setImage(
-            "https://media.giphy.com/media/1lJHto7LJMbDlCl1kv/giphy.gif"
-          )
-          .setFooter({ text: `${eventDuration || 360}` });
 
         await interaction.editReply({
-          content: "Select the voice channel where the event will take place!",
+          content: "Select the event associated with a voice channel to end.",
           components: [row],
-          embeds: [embed],
         });
       } catch (err) {
         console.error(err);

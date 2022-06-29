@@ -2,7 +2,7 @@ const Sequelize = require("sequelize");
 const fs = require("fs");
 const path = require("path");
 
-const sequelize = new Sequelize("test", "root", "test123", {
+const sequelize = new Sequelize("discord_bot_local", "rep3", "discord_bot", {
   host: "localhost",
   dialect: "mysql",
 });
