@@ -3,21 +3,21 @@ const { REST } = require("@discordjs/rest");
 const { Routes } = require("discord-api-types/v9");
 require("dotenv").config();
 
-const CLIENTID = process.env.CLIENTID;
-const TOKEN = process.env.TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
-const clearCommandsInGuild = async (GUILDID) => {
+const clearCommandsInGuild = async (GUILD_ID) => {
   const commands = [];
 
-  const rest = new REST({ version: "9" }).setToken(TOKEN);
+  const rest = new REST({ version: "9" }).setToken(DISCORD_TOKEN);
 
   try {
-    await rest.put(Routes.applicationGuildCommands(CLIENTID, GUILDID), {
+    await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), {
       body: commands,
     });
     console.log(
       "Successfully cleared application commands for guild with guildID: ",
-      GUILDID
+      GUILD_ID
     );
     return true;
   } catch (error) {

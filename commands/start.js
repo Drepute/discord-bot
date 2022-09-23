@@ -34,6 +34,17 @@ module.exports = {
         .setName("duration")
         .setDescription("Duration of the call in minutes")
         .setMinValue(1)
+        .setRequired(true)
+    )
+    .addIntegerOption((option) =>
+      option
+        .setName("participant-threshold")
+        .setDescription(
+          "Threshold percent to grant participant badges to the attendee"
+        )
+        .setMinValue(1)
+        .setMaxValue(100)
+        .setRequired(true)
     ),
   async execute(interaction) {
     if (interaction.inGuild()) {
@@ -50,6 +61,9 @@ module.exports = {
       // const banner = await interaction.guild.iconURL();
       const eventTitle = interaction.options.getString("title");
       const eventDuration = interaction.options.getInteger("duration");
+      const participantThreshold = interaction.options.getInteger(
+        "paritcipant-threshold"
+      );
 
       // await interaction.editReply({
       //   content: `Your inputs are: ${eventTitle}, ${eventDuration}`,
@@ -83,7 +97,11 @@ module.exports = {
           .setImage(
             "https://media.giphy.com/media/1lJHto7LJMbDlCl1kv/giphy.gif"
           )
-          .setFooter({ text: `${eventDuration || 360}` });
+          .setFooter({
+            text: `Duration: ${eventDuration || 360} | Threshold: ${
+              participantThreshold || 1
+            }%`,
+          });
 
         await interaction.editReply({
           content: "Select the voice channel where the event will take place!",

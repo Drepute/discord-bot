@@ -4,8 +4,8 @@ const { Routes } = require("discord-api-types/v9");
 require("dotenv").config();
 const path = require("path");
 
-const CLIENTID = process.env.CLIENTID;
-const TOKEN = process.env.TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
 const deployCommandsToAllServers = () => {
   const commands = [];
@@ -18,10 +18,10 @@ const deployCommandsToAllServers = () => {
     commands.push(command.data.toJSON());
   }
 
-  const rest = new REST({ version: "9" }).setToken(TOKEN);
+  const rest = new REST({ version: "9" }).setToken(DISCORD_TOKEN);
 
   rest
-    .put(Routes.applicationCommands(CLIENTID), { body: commands })
+    .put(Routes.applicationCommands(CLIENT_ID), { body: commands })
     .then(() => console.log("Successfully registered application commands."))
     .catch(console.error);
 };

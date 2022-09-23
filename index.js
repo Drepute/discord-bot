@@ -1,15 +1,16 @@
-const fs = require("node:fs");
 require("dotenv").config();
+
+const fs = require("node:fs");
 const { Client, Collection, Intents, MessageEmbed } = require("discord.js");
-// const { addGm, getNumberOfGm, getSpecifiedChannel } = require("./totalGm");
+const cors = require("cors");
+const express = require("express");
+
 const apiClient = require("./utils/apiClient");
 const { updateToken } = require("./utils/token");
 const api = require("./constants/api");
 const deployCommands = require("./utils/deployCommands");
 const deployCommandsToAllServers = require("./utils/deployCommandToAllServers");
 const clearCommandsInGuild = require("./utils/clearCommandsInGuild");
-const cors = require("cors");
-const express = require("express");
 const removeMapping = require("./utils/removeMapping");
 const {
   createEvent,
@@ -25,12 +26,26 @@ const {
 } = require("./utils/trackvc");
 
 const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
-const app = express();
-const port = 5000;
+const PORT = process.env.PORT || 5000;
 const BASE_URL = "/discord_bot";
 
-const TOKEN = process.env.TOKEN;
+// Create an express app
+const app = express();
+const router = express.Router();
+
+app.use(express.json());
+app.use(cors({ origin: "*" }));
+app.use(function (err, req, res, next) {
+  res.json({ message: err.message });
+});
+app.use(BASE_PATH, router);
+
+const db = require("./db");
+// DB Init
+// This will run .sync() only if database name ends with '_local'
+db.sequelize.sync({ alter: true, match: /_local$/ });
 
 const client = new Client({
   intents: [
@@ -41,13 +56,6 @@ const client = new Client({
     // Intents.FLAGS.GUILD_SCHEDULED_EVENTS,
   ],
 });
-
-module.exports = client;
-
-const db = require("./db");
-// DB Init
-// This will run .sync() only if database name ends with '_dev'
-db.sequelize.sync({ alter: true, match: /_local$/ });
 
 const commandFiles = fs
   .readdirSync("./commands")
@@ -61,15 +69,7 @@ for (const file of commandFiles) {
 }
 
 client.once("ready", async () => {
-  // if (process.env.DEPLOY_COMMANDS === "true") {
-  //   if (process.env.NODE_ENV === "production") {
-  //     deployCommandsToAllServers();
-  //   } else {
-  //     const GUILDID = process.env.GUILDID;
-  //     deployCommands(GUILDID);
-  //   }
-  // }
-  console.log("Ready!");
+  console.log("Discord Client Ready!");
   const res = await apiClient.get(
     `${api.BASE_URL}${api.ROUTES.getAdminToken}`,
     {
@@ -83,6 +83,14 @@ client.once("ready", async () => {
     console.log("access token is ", res.data.data.token);
     updateToken(res.data.data.token);
   }
+});
+
+client.on("guildCreate", (guild) => {
+  deployCommands(guild.id);
+});
+
+client.on("guildDelete", (guild) => {
+  removeMapping(guild.id);
 });
 
 client.on("voiceStateUpdate", async (oldState, newState) => {
@@ -190,7 +198,12 @@ client.on("interactionCreate", async (interaction) => {
         const guildId = interaction.guildId;
         const guild = interaction.guild;
         const channelId = interaction.values[0];
-        const duration = parseInt(interaction.message.embeds[0].footer.text);
+        const footer = interaction.message.embeds[0].footer.text;
+
+        const duration = parseInt(footer.split("|")[0].split(":")[1]);
+        const partcipantThreshold = parseInt(
+          footer.split("|")[1].split(":")[1].split("%")[0]
+        );
 
         const channel = await guild.channels.fetch([channelId]);
         const channelName = channel.name;
@@ -200,7 +213,8 @@ client.on("interactionCreate", async (interaction) => {
           guildId,
           channelId,
           channelName,
-          duration
+          duration,
+          participantThreshold
         );
         console.log(`New Event Created:\n${JSON.stringify(event, null, 2)}`);
 
@@ -326,119 +340,13 @@ client.on("interactionCreate", async (interaction) => {
   // }
 });
 
-// let regex = new RegExp(/(?:^|\W)gm(?:$|\W)/, "i");
+client.login(DISCORD_TOKEN);
 
-// client.on("messageCreate", (msg) => {
-//   // if the author of message is a bot do nothing
-//   if (msg.author.bot) return;
+/*
+ * Endpoints
+ */
 
-//   // if the message is not sent in a server do nothing
-//   if (!msg.inGuild()) return;
-
-//   const gmChannel = getSpecifiedChannel();
-//   if (regex.test(msg.content) && gmChannel === msg.channelId) {
-//     addGm();
-//     const gms = getNumberOfGm();
-//     console.log("gm are", gms.toString());
-//     msg.reply(gms.toString());
-//   }
-// });
-// client.on("guildScheduledEventUpdate", async (oldEvent, newEvent) => {
-//   console.log("old event", oldEvent);
-//   console.log("new event", newEvent);
-// });
-
-// client.on("guildScheduledEventCreate", async (event) => {
-//   console.log("event created", event);
-// });
-// app.get("/getMessages", async (req, res) => {
-//   const channel = await client.channels.fetch("982195140221366305");
-//   // const messages = await channel.messages.fetch({ limit: 100 });
-
-//   let messages = [];
-
-//   // Create message pointer
-//   let message = await channel.messages
-//     .fetch({ limit: 1 })
-//     .then((messagePage) => (messagePage.size === 1 ? messagePage.at(0) : null));
-
-//   while (message) {
-//     await channel.messages
-//       .fetch({ limit: 2, before: message.id })
-//       .then((messagePage) => {
-//         messagePage.forEach((msg) => messages.push(msg));
-
-//         // Update our message pointer to be last message in page of messages
-//         message =
-//           0 < messagePage.size ? messagePage.at(messagePage.size - 1) : null;
-//       });
-//   }
-//   console.log("messages are ", messages.length);
-//   res.send(messages);
-// });
-// const guild = await client.guilds.fetch("983416100677099602");
-// // console.log("guild id is", guild);
-// await guild.scheduledEvents.create({
-//   name: "test event",
-//   scheduledStartTime: new Date(),
-//   privacyLevel: 2,
-//   entityType: 2,
-//   channel: "983416100677099606",
-// });
-
-// const guilds = await client.guilds.fetch();
-// console.log("guild are", guilds.length);
-// const guildsPromise = guilds.map((guild) => guild.fetch());
-// const guildsResolved = await Promise.all(guildsPromise);
-// for (let i = 0; i < guildsResolved.length; i++) {
-//   const commands = await guildsResolved[i].commands.fetch();
-//   console.log("command", typeof commands, commands);
-//   const registerCommand = commands.find(
-//     (command) => command.name === "register"
-//   );
-
-//   if (!client.application?.owner) await client.application?.fetch();
-
-//   // const command = registerCommand;
-//   const command = await client.guilds.cache
-//     .get(guildsResolved[i].id)
-//     ?.commands.fetch(registerCommand.id);
-
-//   const permissions = [
-//     {
-//       id: guildsResolved[i].ownerId,
-//       type: "USER",
-//       permission: true,
-//     },
-//   ];
-
-//   await command.permissions.add({ permissions });
-// }
-// let roles = [];
-// guilds.map(async (guildTemp) => {
-//   const guild = await guildTemp.fetch();
-//   const role = await guild.roles.fetch();
-//   console.log("role id", role);
-//   roles = [...roles, ...role];
-// });
-// console.log("guilds are", guilds);
-// const x = roles.map(role)
-// console.log("roles are", roles);
-
-client.on("guildCreate", (guild) => {
-  deployCommands(guild.id);
-});
-
-client.on("guildDelete", (guild) => {
-  removeMapping(guild.id);
-});
-
-client.login(TOKEN);
-
-app.use(express.json());
-app.use(cors());
-
-app.post(`${BASE_URL}/toggleBot`, cors(), async (req, res) => {
+router.post("/toggleBot", async (req, res, next) => {
   const guildId = req.body.guild_id;
   // const commands = req.body.commands;
   const disableBot = req.body.disable_bot;
@@ -457,7 +365,7 @@ app.post(`${BASE_URL}/toggleBot`, cors(), async (req, res) => {
   });
 });
 
-app.get(`${BASE_URL}/details/:guild_id`, async (req, res) => {
+router.get("/details/:guild_id", async (req, res, next) => {
   const guildId = req.params.guild_id;
   const guilds = await client.guilds.fetch();
   console.log("guild are", guilds, guildId);
@@ -488,7 +396,7 @@ app.get(`${BASE_URL}/details/:guild_id`, async (req, res) => {
   }
 });
 
-app.post(`${BASE_URL}/removeBot`, async (req, res) => {
+router.post("/removeBot", async (req, res, next) => {
   const guildId = req.body.guild_id;
   const guilds = await client.guilds.fetch();
   const guildsPromise = guilds.map((guild) => guild.fetch());
@@ -523,10 +431,10 @@ app.post(`${BASE_URL}/removeBot`, async (req, res) => {
   }
 });
 
-app.get(`${BASE_URL}/ping`, (req, res) => {
+router.get("/ping", (req, res) => {
   res.status(200).send({ status: "success" });
 });
 
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
+app.listen(PORT, () => {
+  console.log(`Rep3 Discord Bot App listening on port ${PORT}`);
 });

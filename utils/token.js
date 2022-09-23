@@ -12,4 +12,5 @@ const methods = {
   updateToken,
   getToken,
 };
+
 module.exports = methods;

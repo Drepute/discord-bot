@@ -26,6 +26,13 @@ module.exports = (sequelize, DataTypes) => {
         min: 1,
       },
     },
+    participantThreshold: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      validate: {
+        min: 1,
+      },
+    },
     title: {
       type: DataTypes.STRING,
       allowNull: false,

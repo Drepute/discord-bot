@@ -1,9 +1,9 @@
 const { getSecretValue } = require("../secrets");
 require("dotenv").config();
 
-const TOKEN = process.env.TOKEN;
-const GUILDID = process.env.GUILDID;
-const CLIENTID = process.env.CLIENTID;
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+const GUILD_ID = process.env.GUILD_ID;
+const CLIENT_ID = process.env.CLIENT_ID;
 const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
 
 let env;
@@ -12,7 +12,7 @@ const environment = process.env.NODE_ENV;
 // todo: club discord token and client id into one
 async function getDiscordToken() {
   if (environment == "dev") {
-    return TOKEN;
+    return DISCORD_TOKEN;
   } else {
     const discordSecret = await getSecretValue(`${environment}_discord`);
     return discordSecret;
@@ -32,7 +32,7 @@ async function getInternalToken() {
 
 async function getClientId() {
   if (environment == "dev") {
-    return CLIENTID;
+    return CLIENT_ID;
   } else {
     const clientId = await getSecretValue(`${environment}_client_id`);
     return clientId;
@@ -41,7 +41,7 @@ async function getClientId() {
 
 async function getGuildId() {
   if (environment == "dev") {
-    return GUILDID;
+    return GUILD_ID;
   } else {
     const guildId = await getSecretValue(`${environment}_guild_id`);
     return guildId;

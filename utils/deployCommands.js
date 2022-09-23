@@ -4,10 +4,10 @@ const { Routes } = require("discord-api-types/v9");
 require("dotenv").config();
 const path = require("path");
 
-const CLIENTID = process.env.CLIENTID;
-const TOKEN = process.env.TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
-const deployCommands = async (GUILDID, commandsToDeploy = []) => {
+const deployCommands = async (GUILD_ID, commandsToDeploy = []) => {
   const commands = [];
   const commandFiles = fs
     .readdirSync(path.resolve(__dirname, "../commands"))
@@ -23,10 +23,10 @@ const deployCommands = async (GUILDID, commandsToDeploy = []) => {
     }
   }
 
-  const rest = new REST({ version: "9" }).setToken(TOKEN);
+  const rest = new REST({ version: "9" }).setToken(DISCORD_TOKEN);
 
   try {
-    await rest.put(Routes.applicationGuildCommands(CLIENTID, GUILDID), {
+    await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), {
       body: commands,
     });
     console.log("Successfully registered application commands.");

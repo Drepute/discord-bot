@@ -31,7 +31,8 @@ const createEvent = async (
   guildId,
   channelId,
   channelName,
-  duration = 360
+  duration = 360,
+  participantThreshold = 1,
 ) => {
   const event = await db.Event.create({
     title,
@@ -39,6 +40,7 @@ const createEvent = async (
     channelId,
     channelName,
     duration,
+    participantThreshold
     active: true,
   });
 
