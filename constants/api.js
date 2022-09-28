@@ -1,10 +1,11 @@
+const LOCAL_IP = "192.168.1.243";
 const api = {
   BASE_URL:
     process.env.NODE_ENV === "production"
       ? "https://api.drepute.xyz/dao_tool_server"
       : process.env.NODE_ENV === "staging"
       ? "https://test-staging.api.drepute.xyz/dao_tool_server"
-      : "https://test-staging.api.drepute.xyz/dao_tool_server",
+      : `http://${LOCAL_IP}:5000/dao_tool_server`,
   ROUTES: {
     createContribution: "/contrib",
     isDaoRegistered: "/discord/is_dao_registered",

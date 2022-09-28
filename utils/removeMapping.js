@@ -17,4 +17,5 @@ const removeMapping = async (GUILDID) => {
     return false;
   }
 };
+
 module.exports = removeMapping;

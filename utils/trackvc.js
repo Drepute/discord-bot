@@ -40,7 +40,7 @@ const createEvent = async (
     channelId,
     channelName,
     duration,
-    participantThreshold
+    participantThreshold,
     active: true,
   });
 

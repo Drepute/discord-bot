@@ -8,13 +8,16 @@ const express = require("express");
 const apiClient = require("./utils/apiClient");
 const { updateToken } = require("./utils/token");
 const api = require("./constants/api");
-const deployCommands = require("./utils/deployCommands");
-const deployCommandsToAllServers = require("./utils/deployCommandToAllServers");
-const clearCommandsInGuild = require("./utils/clearCommandsInGuild");
+const {
+  deployCommands,
+  clearCommandsInGuild,
+  getGuildRoles,
+  getAccessToken,
+  getUserGuilds,
+} = require("./utils/discordApi");
 const removeMapping = require("./utils/removeMapping");
 const {
   createEvent,
-  getEvent,
   endEvent,
   getActiveEvent,
   addParticipant,
@@ -27,9 +30,10 @@ const {
 
 const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+const GUILD_ID = process.env.GUILD_ID;
 
-const PORT = process.env.PORT || 5000;
-const BASE_URL = "/discord_bot";
+const PORT = process.env.PORT || 3000;
+const BASE_PATH = "/discord_bot";
 
 // Create an express app
 const app = express();
@@ -86,10 +90,12 @@ client.once("ready", async () => {
 });
 
 client.on("guildCreate", (guild) => {
+  console.info("NEW GUILD!", guild.id, guild.name);
   deployCommands(guild.id);
 });
 
 client.on("guildDelete", (guild) => {
+  console.info("Guild removed bot!", guild.id, guild.name);
   removeMapping(guild.id);
 });
 
@@ -189,6 +195,12 @@ client.on("interactionCreate", async (interaction) => {
 
   console.log("interaction is", interaction?.commandName);
 
+  if (interaction.customId === "create-event-modal") {
+    return await interaction.reply({
+      content: "Your submission was received successfully!",
+    });
+  }
+
   // voice channel tracking selection
   if (interaction.isSelectMenu()) {
     // start
@@ -201,7 +213,7 @@ client.on("interactionCreate", async (interaction) => {
         const footer = interaction.message.embeds[0].footer.text;
 
         const duration = parseInt(footer.split("|")[0].split(":")[1]);
-        const partcipantThreshold = parseInt(
+        const participantThreshold = parseInt(
           footer.split("|")[1].split(":")[1].split("%")[0]
         );
 
@@ -288,11 +300,11 @@ client.on("interactionCreate", async (interaction) => {
             url: "https://rep3.gg",
           })
           .setThumbnail(
-            guild?.icon ||
+            guild?.iconURL() ||
               "https://pbs.twimg.com/profile_images/1537387013972054017/T8yWB5Gk_400x400.jpg"
           )
           .setImage(
-            guild?.banner ||
+            guild?.bannerURL() ||
               "https://pbs.twimg.com/profile_images/1537387013972054017/T8yWB5Gk_400x400.jpg"
           )
           .addFields(
@@ -428,6 +440,42 @@ router.post("/removeBot", async (req, res, next) => {
       success: true,
       message: "No guild with this id found",
     });
+  }
+});
+
+router.get("/guildRoles/:guildId", async (req, res, next) => {
+  try {
+    const roles = await getGuildRoles(req.params.guildId);
+    res.status(200).send({ data: roles });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/userGuilds", async (req, res, next) => {
+  try {
+    const { discord_code, redirect_uri } = req.query;
+    if (discord_code == undefined || redirect_uri == undefined) {
+      return res.status(400).send();
+    }
+    const tokenObj = await getAccessToken(discord_code, redirect_uri);
+    console.info("[/userGuilds] TOKEN_OBJECT:", tokenObj);
+    const { guilds, error } = await getUserGuilds(tokenObj.access_token);
+
+    if (error) return next(error);
+
+    res.status(200).send({ data: guilds });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/discordRedirect", async (req, res, next) => {
+  try {
+    console.log("[discordRedirect]", req.query);
+    res.status(200).send({ data: req.query });
+  } catch (err) {
+    next(err);
   }
 });
 

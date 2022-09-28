@@ -38,7 +38,7 @@ module.exports = {
       const guildId = interaction.guildId;
       // const userId = interaction.member.id;
 
-      let options;
+      let options = [];
       try {
         const events = await getAllActiveEvents();
         options = events.map((event) => {
@@ -50,6 +50,12 @@ module.exports = {
       } catch (err) {
         console.error(err);
         return;
+      }
+
+      if (!options.length) {
+        return await interaction.editReply({
+          content: "No active events found!",
+        });
       }
 
       try {

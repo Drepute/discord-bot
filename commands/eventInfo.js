@@ -29,7 +29,7 @@ module.exports = {
       ) {
         return interaction.reply({
           content:
-            "Please contact the discord server administrator to end tracking",
+            "You are not authorized to view events info! Please contact the admins.",
           ephemeral: true,
         });
       }
@@ -38,7 +38,7 @@ module.exports = {
       const guildId = interaction.guildId;
       // const userId = interaction.member.id;
 
-      let options;
+      let options = [];
       try {
         const events = await getAllInactiveEvents();
         options = events.map((event) => {
@@ -48,8 +48,14 @@ module.exports = {
           };
         });
       } catch (err) {
-        console.error(err);
+        console.error("[getAllInactiveEvents]", err);
         return;
+      }
+
+      if (!options.length) {
+        return await interaction.editReply({
+          content: "Could not find any events!",
+        });
       }
 
       try {
