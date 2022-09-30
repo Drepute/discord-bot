@@ -3,20 +3,9 @@ const {
   Permissions,
   MessageActionRow,
   MessageSelectMenu,
-  Intents,
-  Client,
 } = require("discord.js");
 const { getAllInactiveEvents } = require("../utils/trackvc");
 // const client = require("../index");
-
-const client = new Client({
-  intents: [
-    Intents.FLAGS.GUILDS,
-    Intents.FLAGS.GUILD_MESSAGES,
-    Intents.FLAGS.DIRECT_MESSAGES,
-    // Intents.FLAGS.GUILD_SCHEDULED_EVENTS,
-  ],
-});
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -40,7 +29,7 @@ module.exports = {
 
       let options = [];
       try {
-        const events = await getAllInactiveEvents();
+        const events = await getAllInactiveEvents(guildId);
         options = events.map((event) => {
           return {
             label: `[${event.channelName}] ${event.title}`,

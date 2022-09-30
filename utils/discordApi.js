@@ -5,6 +5,8 @@ const { REST } = require("@discordjs/rest");
 const { Routes } = require("discord-api-types/v9");
 const path = require("path");
 
+const api = require("./constants/api");
+
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
@@ -15,10 +17,10 @@ const rest = new REST({ version: "9" }).setToken(DISCORD_TOKEN);
 
 const getAccessToken = async (
   discord_code,
-  redirect_uri = process.env.DISCORD_REDIRECT_URI
+  redirect_uri = api.DISCORD_REDIRECT_URI
 ) => {
   let token;
-  const headers = { "Content-Type": "application/x-www-form-urlencoded" };
+  // const headers = { "Content-Type": "application/x-www-form-urlencoded" };
   const params = new URLSearchParams();
   params.append("client_id", CLIENT_ID);
   params.append("client_secret", CLIENT_SECRET);

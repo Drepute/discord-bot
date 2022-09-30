@@ -15,6 +15,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
+    contractAddress: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     active: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
@@ -32,6 +36,22 @@ module.exports = (sequelize, DataTypes) => {
       validate: {
         min: 1,
       },
+    },
+    badgeTokenType: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    badgeMetadataHash: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    badgeCollectionName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    badgeTypeName: {
+      type: DataTypes.STRING,
+      allowNull: false,
     },
     title: {
       type: DataTypes.STRING,

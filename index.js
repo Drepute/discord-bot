@@ -1,7 +1,16 @@
 require("dotenv").config();
 
+const schedule = require("node-schedule");
 const fs = require("node:fs");
-const { Client, Collection, Intents, MessageEmbed } = require("discord.js");
+const {
+  Client,
+  Collection,
+  Intents,
+  MessageEmbed,
+  MessageActionRow,
+  MessageSelectMenu,
+} = require("discord.js");
+
 const cors = require("cors");
 const express = require("express");
 
@@ -15,7 +24,7 @@ const {
   getAccessToken,
   getUserGuilds,
 } = require("./utils/discordApi");
-const removeMapping = require("./utils/removeMapping");
+const { getBadgeTypes, getDao } = require("./utils/daoToolServerApis.js");
 const {
   createEvent,
   endEvent,
@@ -26,11 +35,13 @@ const {
   addMultipleParticipants,
   addParticipantEndTime,
   showEventInfo,
+  getEvent,
+  postEventProcess,
 } = require("./utils/trackvc");
 
 const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-const GUILD_ID = process.env.GUILD_ID;
+// const GUILD_ID = process.env.GUILD_ID;
 
 const PORT = process.env.PORT || 3000;
 const BASE_PATH = "/discord_bot";
@@ -94,10 +105,10 @@ client.on("guildCreate", (guild) => {
   deployCommands(guild.id);
 });
 
-client.on("guildDelete", (guild) => {
-  console.info("Guild removed bot!", guild.id, guild.name);
-  removeMapping(guild.id);
-});
+// client.on("guildDelete", (guild) => {
+//   console.info("Guild removed bot!", guild.id, guild.name);
+//   removeMapping(guild.id);
+// });
 
 client.on("voiceStateUpdate", async (oldState, newState) => {
   const oldChannelId = oldState.channelId;
@@ -111,7 +122,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 
   // joined a vc
   if (!oldChannelId && newChannelId) {
-    const event = await getActiveEvent(newChannelId);
+    const event = await getActiveEvent(newChannelId, newState.guild.id);
     // no active event for vc
     if (!event) return;
 
@@ -131,13 +142,13 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 
   // left a vc
   if (oldChannelId && !newChannelId) {
-    const event = await getActiveEvent(oldChannelId);
+    const event = await getActiveEvent(oldChannelId, oldState.guild.id);
     // no active event for vc
     if (!event) return;
 
     const sessionId = oldState.sessionId;
     const userId = oldState.id;
-    const eventId = eventId.id;
+    const eventId = event.id;
     const participant = await getParticipant(sessionId, userId, eventId);
 
     // no previous record to update
@@ -157,7 +168,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
   // left a old vc and joined a new vc
   if (typeof oldChannelId === "string" && typeof newChannelId === "string") {
     // for new vc (join)
-    const event = await getActiveEvent(newChannelId);
+    const event = await getActiveEvent(newChannelId, newState.guild.id);
     if (event) {
       const details = {
         userId: newState.id,
@@ -175,7 +186,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     // for previous vc (leave)
     const sessionId = oldState.sessionId;
     const userId = oldState.id;
-    const eventId = eventId.id;
+    const eventId = event.id;
     const participant = await getParticipant(sessionId, userId, eventId);
     if (participant) {
       const details = {
@@ -193,22 +204,14 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 client.on("interactionCreate", async (interaction) => {
   // if (!interaction.isCommand()) return;
 
-  console.log("interaction is", interaction?.commandName);
-
-  if (interaction.customId === "create-event-modal") {
-    return await interaction.reply({
-      content: "Your submission was received successfully!",
-    });
-  }
-
   // voice channel tracking selection
   if (interaction.isSelectMenu()) {
     // start
     if (interaction.customId === "voice-select") {
       try {
         const title = interaction.message.embeds[0].title;
-        const guildId = interaction.guildId;
         const guild = interaction.guild;
+        const guildId = interaction.guildId;
         const channelId = interaction.values[0];
         const footer = interaction.message.embeds[0].footer.text;
 
@@ -220,17 +223,112 @@ client.on("interactionCreate", async (interaction) => {
         const channel = await guild.channels.fetch([channelId]);
         const channelName = channel.name;
 
+        let options = [];
+        try {
+          const dao = await getDao(guildId);
+          const badgeCollections = await getBadgeTypes(dao.uuid);
+          for (const bc of badgeCollections) {
+            for (const bt of bc.badge_types) {
+              options.push({
+                label: `${bc.type} | ${bt.name}`,
+                value: `${bc.token_type} | ${bt.metadata_hash} | ${bc.type} | ${bt.name}`,
+              });
+            }
+          }
+        } catch (err) {
+          console.error(err.message);
+        }
+
+        if (!options.length) {
+          return await interaction.followUp({
+            content: "Could not fetch badge types! Try again later.",
+          });
+        }
+
+        const selectRow = new MessageActionRow().addComponents(
+          new MessageSelectMenu()
+            .setCustomId("badge-select")
+            .setPlaceholder("Select a badge")
+            .setOptions(options)
+        );
+
+        const embed = new MessageEmbed()
+          .setColor("#0099ff")
+          .setTitle(`${title}`)
+          .setImage(
+            "https://media.giphy.com/media/1lJHto7LJMbDlCl1kv/giphy.gif"
+          )
+          .setFooter({
+            text: `Duration: ${duration} | Threshold: ${
+              participantThreshold || 1
+            }%`,
+          })
+          .addFields(
+            {
+              name: "Track Channel",
+              value: `${channelName} | ${channelId}`,
+            },
+            {
+              name: "Steps remaining",
+              value:
+                "- Select a badge to distribute post event to eligible members",
+            }
+          );
+
+        await interaction.deferUpdate();
+        await interaction.editReply({
+          content: " ",
+          embeds: [embed],
+          components: [selectRow],
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    if (interaction.customId === "badge-select") {
+      try {
+        const title = interaction.message.embeds[0].title;
+        const guildId = interaction.guildId;
+        const guild = interaction.guild;
+        const badgeInfo = interaction.values[0].split("|");
+        const badgeTokenType = parseInt(badgeInfo[0]);
+        const badgeMetadataHash = badgeInfo[1].trim();
+        const badgeType = badgeInfo[2].trim();
+        const badgeLevel = badgeInfo[3].trim();
+        const footer = interaction.message.embeds[0].footer.text;
+        const channelInfo =
+          interaction.message.embeds[0].fields[0].value.split("|");
+        const channelName = channelInfo[0].trim();
+        const channelId = channelInfo[1].trim();
+
+        const duration = parseInt(footer.split("|")[0].split(":")[1]);
+        const participantThreshold = parseInt(
+          footer.split("|")[1].split(":")[1].split("%")[0]
+        );
+
+        await interaction.deferUpdate();
+
+        const dao = await getDao(guildId);
+
         const event = await createEvent(
           title,
           guildId,
           channelId,
           channelName,
           duration,
-          participantThreshold
+          participantThreshold,
+          dao?.contract_address,
+          badgeTokenType,
+          badgeMetadataHash,
+          badgeType,
+          badgeLevel
         );
         console.log(`New Event Created:\n${JSON.stringify(event, null, 2)}`);
 
+        const channel = await guild.channels.fetch([channelId]);
         const currentParticipants = channel.members;
+
         const participantsDetailList = currentParticipants.map((user) => {
           return {
             userId: user.id,
@@ -240,13 +338,62 @@ client.on("interactionCreate", async (interaction) => {
         });
         await addMultipleParticipants(event, participantsDetailList);
 
-        await interaction.deferUpdate();
+        const embed = new MessageEmbed()
+          .setColor("#0099ff")
+          .setTitle(`${title}`)
+          .setImage(
+            "https://media.giphy.com/media/1lJHto7LJMbDlCl1kv/giphy.gif"
+          )
+          .setFooter({
+            text: `Duration: ${duration} | Threshold: ${
+              participantThreshold || 1
+            }%`,
+          })
+          .addFields(
+            {
+              name: "Channel to track",
+              value: channelName,
+            },
+            {
+              name: "Participation Badge",
+              value: `${badgeType} | ${badgeLevel}`,
+            }
+          );
+
         await interaction.editReply({
+          content: " ",
+          embeds: [embed],
           components: [],
         });
         await interaction.followUp({
-          content: `Event is successfully created for ${channel.name} voice channel`,
+          content: `Started tracking ${channelName} voice channel for the next ${duration} minutes. Members who stay in the channel for more than ${participantThreshold}% of the total tracking duration will receive a badge of type ${badgeType} and level ${badgeLevel}.`,
           ephemeral: true,
+        });
+
+        // schedule post event logic
+        let date = new Date();
+        date.setMinutes(date.getMinutes() + duration);
+        const job = schedule.scheduleJob(date, async function () {
+          if (event.active) {
+            await addParticipantEndTime(event.id, new Date());
+            await endEvent(event.id);
+
+            await interaction.followUp({
+              content: "Event has now ended!",
+              ephemeral: true,
+            });
+
+            const eligibleParticipants = await postEventProcess(event.id);
+            if (eligibleParticipants) {
+              const mentions = eligibleParticipants.data
+                .map((item) => `<@${item.user_id}>`)
+                .join(" ");
+              const content = `\n${mentions}\n\nYou have been issued \`${badgeType} | ${badgeLevel}\` badge for participating in \`${event.title}\` event. Please claim your badge using the rep3 [app](https://rep3.gg).`;
+              await interaction.followUp({
+                content: content,
+              });
+            }
+          }
         });
       } catch (err) {
         console.error(err);
@@ -259,17 +406,31 @@ client.on("interactionCreate", async (interaction) => {
         const guildId = interaction.guildId;
         const eventId = parseInt(interaction.values[0]);
 
-        await addParticipantEndTime(eventId, new Date());
-
-        await endEvent(eventId);
         await interaction.deferUpdate();
+
+        await addParticipantEndTime(eventId, new Date());
+        await endEvent(eventId);
+
         await interaction.editReply({
           components: [],
         });
+
         await interaction.followUp({
           content: "Event has now ended!",
           ephemeral: true,
         });
+
+        const event = await getEvent(eventId);
+        const eligibleParticipants = await postEventProcess(eventId);
+        if (eligibleParticipants) {
+          const mentions = eligibleParticipants.data
+            .map((item) => `<@${item.user_id}>`)
+            .join(" ");
+          const content = `${mentions}\n\nYou have been issued \`${event.badgeCollectionName} | ${event.badgeTypeName}\` badge for participating in ${event.title} event. Please claim your badge using the [rep3 app](${api.DAO_TOOL_BASE_URL}).`;
+          await interaction.followUp({
+            content: content,
+          });
+        }
       } catch (err) {
         console.error(err);
       }
@@ -315,9 +476,9 @@ client.on("interactionCreate", async (interaction) => {
             },
             {
               name: "Participants",
-              value: info.participants
-                .map((user) => user.displayName)
-                .join("\n"),
+              value: !info.totalParticipants
+                ? "None"
+                : info.participants.map((user) => user.displayName).join("\n"),
             }
           )
           .setFooter({

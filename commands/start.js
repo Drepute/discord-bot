@@ -104,10 +104,15 @@ module.exports = {
             text: `Duration: ${eventDuration || 360} | Threshold: ${
               participantThreshold || 1
             }%`,
+          })
+          .addFields({
+            name: "Steps remaining",
+            value:
+              "- Select a voice channel to track participation\n- Select a badge to distribute post event to eligible members",
           });
 
         await interaction.editReply({
-          content: "Select the voice channel where the event will take place!",
+          content: " ",
           components: [selectRow],
           embeds: [embed],
         });
