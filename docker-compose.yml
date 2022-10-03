@@ -4,12 +4,12 @@ version: "3.9"
 services:
   discord-bot-server:
     container_name: discord-bot-server
-    image: discord-bot-server
+    image: discord-bot
     environment:
       - NODE_ENV=dev
       - AWS_DEFAULT_REGION=us-east-1
-    env-file: .env
-    entrypoint: yarn run start:dev
+    env_file: .env
+    entrypoint: node index.js
     networks:
       - service_mesh
 
