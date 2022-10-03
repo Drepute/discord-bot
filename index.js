@@ -43,7 +43,7 @@ const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 // const GUILD_ID = process.env.GUILD_ID;
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.NODE_ENV === "dev" ? 3000 : 5000;
 const BASE_PATH = "/discord_bot";
 
 // Create an express app
