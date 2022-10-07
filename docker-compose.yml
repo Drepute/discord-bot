@@ -5,11 +5,18 @@ services:
   discord-bot-server:
     container_name: discord-bot-server
     image: discord-bot
-    environment:
-      - NODE_ENV=dev
-      - AWS_DEFAULT_REGION=us-east-1
+    volumes:
+      - ../discord-bot:/app
+      - /app/node_modules
     env_file: .env
-    entrypoint: node index.js
+    entrypoint: yarn run dev
+    ports:
+      - 3000:3000
+    healthcheck:
+      test: curl --fail -s http://localhost:3000/discord_bot/ping || exit 1
+      interval: 30s
+      timeout: 1s
+      retries: 1
     networks:
       - service_mesh
 

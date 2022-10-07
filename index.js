@@ -53,9 +53,6 @@ const router = express.Router();
 
 app.use(express.json());
 app.use(cors({ origin: "*" }));
-app.use(function (err, req, res, next) {
-  res.json({ message: err.message });
-});
 app.use(BASE_PATH, router);
 
 const db = require("./db");
@@ -610,7 +607,8 @@ router.post("/removeBot", async (req, res, next) => {
 
 router.get("/guildRoles/:guildId", async (req, res, next) => {
   try {
-    const roles = await getGuildRoles(req.params.guildId);
+    const { roles, error } = await getGuildRoles(req.params.guildId);
+    if (error) throw error;
     res.status(200).send({ data: roles });
   } catch (err) {
     next(err);
@@ -623,13 +621,18 @@ router.get("/userGuilds", async (req, res, next) => {
     if (discord_code == undefined || redirect_uri == undefined) {
       return res.status(400).send();
     }
-    const tokenObj = await getAccessToken(discord_code, redirect_uri);
-    console.info("[/userGuilds] TOKEN_OBJECT:", tokenObj);
-    const { guilds, error } = await getUserGuilds(tokenObj.access_token);
+    const tokenRes = await getAccessToken(discord_code, redirect_uri);
 
-    if (error) return next(error);
+    if (tokenRes.error) throw tokenRes.error;
 
-    res.status(200).send({ data: guilds });
+    console.info("[/userGuilds] TOKEN_OBJECT:", tokenRes.token);
+    const userGuildsRes = await getUserGuilds(tokenRes.token);
+
+    if (userGuildsRes.error) throw userGuildsRes.error;
+
+    res
+      .status(200)
+      .send({ data: { guilds: userGuildsRes.guilds, user: tokenRes.user } });
   } catch (err) {
     next(err);
   }
@@ -646,6 +649,10 @@ router.get("/discordRedirect", async (req, res, next) => {
 
 router.get("/ping", (req, res) => {
   res.status(200).send({ status: "success" });
+});
+
+app.use(function (err, req, res, next) {
+  res.json({ error: err.message ? err.message : err });
 });
 
 app.listen(PORT, () => {
