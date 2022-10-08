@@ -23,6 +23,7 @@ const {
   getGuildRoles,
   getAccessToken,
   getUserGuilds,
+  getGuildMember,
 } = require("./utils/discordApi");
 const { getBadgeTypes, getDao } = require("./utils/daoToolServerApis.js");
 const {
@@ -582,7 +583,7 @@ router.post("/removeBot", async (req, res, next) => {
       break;
     }
   }
-  console.log(selectedGuild);
+  console.log(selectedGuild.id, selectedGuild.name);
   if (selectedGuild) {
     try {
       await selectedGuild.leave();
@@ -633,6 +634,40 @@ router.get("/userGuilds", async (req, res, next) => {
     res
       .status(200)
       .send({ data: { guilds: userGuildsRes.guilds, user: tokenRes.user } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/user", async (req, res, next) => {
+  try {
+    const { discord_code, redirect_uri } = req.query;
+    if (discord_code == undefined || redirect_uri == undefined) {
+      return res.status(400).send();
+    }
+    const tokenRes = await getAccessToken(discord_code, redirect_uri);
+    if (tokenRes.error) throw tokenRes.error;
+    console.info("[/user] TOKEN_OBJECT:", tokenRes.token);
+
+    res
+      .status(200)
+      .send({ data: { token: tokenRes.token, user: tokenRes.user } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/guildMember", async (req, res, next) => {
+  try {
+    const { guild_id, user_discord_id } = req.query;
+    if (guild_id == undefined || user_discord_id == undefined) {
+      return res.status(400).send();
+    }
+
+    const guildMemberRes = await getGuildMember(guild_id, user_discord_id);
+    if (guildMemberRes.error) throw guildMemberRes.error;
+
+    res.status(200).send({ guildMember: guildMemberRes.member });
   } catch (err) {
     next(err);
   }

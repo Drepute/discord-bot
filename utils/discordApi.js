@@ -190,6 +190,20 @@ const getGuildRoles = async (GUILD_ID) => {
   return response;
 };
 
+const getGuildMember = async (GUILD_ID, USER_ID) => {
+  const response = { member: null, error: null };
+  try {
+    const res = await rest.get(Routes.guildMember(GUILD_ID, USER_ID));
+    // console.log("[getGuildRoles] res:", JSON.stringify(res));
+    response.member = res;
+  } catch (error) {
+    console.error("[getGuildMember]", error);
+    response.error = error;
+  }
+
+  return response;
+};
+
 module.exports = {
   deployCommands,
   deployCommandsToAllServers,
@@ -197,4 +211,5 @@ module.exports = {
   getGuildRoles,
   getAccessToken,
   getUserGuilds,
+  getGuildMember,
 };
