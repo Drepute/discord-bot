@@ -583,8 +583,8 @@ router.post("/removeBot", async (req, res, next) => {
       break;
     }
   }
-  console.log(selectedGuild.id, selectedGuild.name);
   if (selectedGuild) {
+    console.log(selectedGuild.id, selectedGuild.name);
     try {
       await selectedGuild.leave();
       return res.json({
