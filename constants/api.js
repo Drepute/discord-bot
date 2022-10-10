@@ -16,6 +16,7 @@ const api = {
     getBadgeTypes: "/badge/badge_types",
     daoWithGuild: "/dao/daoWithGuild",
     badgeVoucherCreationInfo: "/discord/badge_voucher_creation_info",
+    discord: "/discord",
   },
   DAO_TOOL_BASE_URL:
     process.env.NODE_ENV === "production"

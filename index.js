@@ -25,7 +25,11 @@ const {
   getUserGuilds,
   getGuildMember,
 } = require("./utils/discordApi");
-const { getBadgeTypes, getDao } = require("./utils/daoToolServerApis.js");
+const {
+  getBadgeTypes,
+  getDao,
+  getAllDiscords,
+} = require("./utils/daoToolServerApis.js");
 const {
   createEvent,
   endEvent,
@@ -623,12 +627,15 @@ router.get("/userGuilds", async (req, res, next) => {
       return res.status(400).send();
     }
     const tokenRes = await getAccessToken(discord_code, redirect_uri);
-
     if (tokenRes.error) throw tokenRes.error;
 
     console.info("[/userGuilds] TOKEN_OBJECT:", tokenRes.token);
-    const userGuildsRes = await getUserGuilds(tokenRes.token);
 
+    const discordsRes = await getAllDiscords();
+    if (discordsRes.error) throw discordsRes.error;
+
+    const guildIds = discordsRes.data.map((item) => item.guild_id);
+    const userGuildsRes = await getUserGuilds(tokenRes.token, guildIds);
     if (userGuildsRes.error) throw userGuildsRes.error;
 
     res

@@ -147,7 +147,7 @@ const getAccessToken = async (
   return response;
 };
 
-const getUserGuilds = async (accessToken) => {
+const getUserGuilds = async (accessToken, guildIds) => {
   const response = { guilds: null, error: null };
   const headers = { Authorization: `Bearer ${accessToken}` };
   const IMAGE_BASE_URL = "https://cdn.discordapp.com";
@@ -156,7 +156,9 @@ const getUserGuilds = async (accessToken) => {
     const guildRes = await axios.get(url, { headers: headers });
     const guilds = guildRes.data
       .filter(
-        (item) => item.owner || convertPerms(item.permissions).ADMINISTRATOR
+        (item) =>
+          (item.owner || convertPerms(item.permissions).ADMINISTRATOR) &&
+          guildIds.indexOf(item.id) < 0
       )
       .map((item) =>
         item.icon
