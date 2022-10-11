@@ -83,7 +83,7 @@ const getBadgeTypes = async (daoUuid) => {
 };
 
 const getBadgeVoucherCreationInfo = async (discordIdArr, contractAddress) => {
-  let data;
+  let data=[];
   try {
     const res = await apiClient.post(
       `${api.BASE_URL}${api.ROUTES.badgeVoucherCreationInfo}`,

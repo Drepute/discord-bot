@@ -184,7 +184,7 @@ const postEventProcess = async (eventId) => {
     event.contractAddress
   );
 
-  if (!voucherCreationInfo) return null;
+  if (!voucherCreationInfo || !voucherCreationInfo.length) return null;
 
   console.log("voucherCreationInfo", voucherCreationInfo);
   console.log("Initiating badge voucher creation...");
