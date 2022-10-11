@@ -179,12 +179,15 @@ const postEventProcess = async (eventId) => {
   console.log("EligibleParticipants", eligibleParticipants);
 
   const discordIdArr = eligibleParticipants.map((user) => user.userId);
+
+  console.log(discordIdArr, event.contractAddress);
+
   const voucherCreationInfo = await getBadgeVoucherCreationInfo(
     discordIdArr,
     event.contractAddress
   );
 
-  console.log("voucherCreationInfo", discordIdArr, event.contractAddress);
+  console.log("voucherCreationInfo", voucherCreationInfo);
 
   if (!voucherCreationInfo || !voucherCreationInfo.length) return null;
 
