@@ -233,6 +233,13 @@ client.on("interactionCreate", async (interaction) => {
         try {
           const dao = await getDao(guildId);
           const badgeCollections = await getBadgeTypes(dao.uuid);
+
+          if (!badgeCollections || !badgeCollections.length) {
+            return await interaction.followUp({
+              content: "Could not fetch badge types! Try again later.",
+            });
+          }
+
           for (const bc of badgeCollections) {
             for (const bt of bc.badge_types) {
               options.push({

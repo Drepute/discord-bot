@@ -51,7 +51,7 @@ const getDao = async (guildId) => {
 };
 
 const getBadgeTypes = async (daoUuid) => {
-  let data;
+  let data = [];
   try {
     const res = await apiClient.get(
       `${api.BASE_URL}${api.ROUTES.getBadgeTypes}?dao_uuid=${daoUuid}`
@@ -83,7 +83,7 @@ const getBadgeTypes = async (daoUuid) => {
 };
 
 const getBadgeVoucherCreationInfo = async (discordIdArr, contractAddress) => {
-  let data=[];
+  let data = [];
   try {
     const res = await apiClient.post(
       `${api.BASE_URL}${api.ROUTES.badgeVoucherCreationInfo}`,
@@ -119,7 +119,7 @@ const getBadgeVoucherCreationInfo = async (discordIdArr, contractAddress) => {
 };
 
 const getAllDiscords = async () => {
-  let response = {data: null, error: null};
+  let response = { data: null, error: null };
   try {
     const res = await apiClient.get(`${api.BASE_URL}${api.ROUTES.discord}`);
 
@@ -143,7 +143,7 @@ const getAllDiscords = async () => {
       err = `error.message: ${error.message}`;
     }
     console.error(err);
-    response.error = error
+    response.error = error;
   }
 
   return response;

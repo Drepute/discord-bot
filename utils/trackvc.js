@@ -184,6 +184,8 @@ const postEventProcess = async (eventId) => {
     event.contractAddress
   );
 
+  console.log("voucherCreationInfo", discordIdArr, event.contractAddress);
+
   if (!voucherCreationInfo || !voucherCreationInfo.length) return null;
 
   console.log("voucherCreationInfo", voucherCreationInfo);
