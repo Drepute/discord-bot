@@ -401,7 +401,7 @@ client.on("interactionCreate", async (interaction) => {
               const mentions = eligibleParticipants.data
                 .map((item) => `<@${item.user_id}>`)
                 .join(" ");
-              const content = `\n${mentions}\n\nYou have been issued \`${badgeType} | ${badgeLevel}\` badge for participating in \`${event.title}\` event. Please claim your badge using the rep3 [app](https://rep3.gg).`;
+              const content = `\n${mentions}\n\nYou have been issued \`${badgeType} | ${badgeLevel}\` badge for participating in \`${event.title}\` event. Please claim your badge using the rep3 [app](${api.DAO_TOOL_BASE_URL}).`;
               await interaction.followUp({
                 content: content,
               });
