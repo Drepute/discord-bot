@@ -17,6 +17,7 @@ const api = {
   DAO_TOOL_BASE_URL: process.env.DAO_TOOL_BASE_URL,
   LAMBDA_URL: process.env.LAMBDA_URL,
   DISCORD_REDIRECT_URI: process.env.DISCORD_REDIRECT_URI,
+  ARWEAVE_SERVER_URL: process.env.ARWEAVE_SERVER_URL,
 };
 
 module.exports = api;
