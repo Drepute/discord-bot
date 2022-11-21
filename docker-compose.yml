@@ -1,0 +1,25 @@
+---
+version: "3.9"
+
+services:
+  discord-bot-server:
+    container_name: discord-bot-server
+    image: discord-bot
+    volumes:
+      - ../discord-bot:/app
+      - /app/node_modules
+    env_file: .env
+    entrypoint: yarn run dev
+    ports:
+      - 3000:3000
+    healthcheck:
+      test: curl --fail -s http://localhost:3000/discord_bot/ping || exit 1
+      interval: 30s
+      timeout: 1s
+      retries: 1
+    networks:
+      - service_mesh
+
+networks:
+  service_mesh:
+    external: true
