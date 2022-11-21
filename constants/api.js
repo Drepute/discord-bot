@@ -12,6 +12,7 @@ const api = {
     badgeVoucherCreationInfo: "/discord/badge_voucher_creation_info",
     discord: "/discord",
     createBadgeVoucher: "/badge/create_badge_voucher",
+    directMint: "/badge/direct_mint",
   },
   DAO_TOOL_BASE_URL: process.env.DAO_TOOL_BASE_URL,
   LAMBDA_URL: process.env.LAMBDA_URL,

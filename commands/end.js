@@ -4,6 +4,7 @@ const {
   MessageActionRow,
   MessageSelectMenu,
 } = require("discord.js");
+const { getDao } = require("../utils/daoToolServerApis.js");
 const { getAllActiveEvents } = require("../utils/trackvc");
 
 module.exports = {
@@ -12,8 +13,24 @@ module.exports = {
     .setDescription("End tracking members in a voice call"),
   async execute(interaction) {
     if (interaction.inGuild()) {
+      const guildId = interaction.guildId;
+      const dao = await getDao(guildId);
+      const allowedRoles = dao.discord.allowed_roles_for_commands?.map(
+        (item) => item.discord_role_id
+      );
+
+      let allow = false;
+      if (allowedRoles !== undefined) {
+        for (const role of interaction.member.roles.cache) {
+          if (allowedRoles.includes(role[0])) {
+            allow = true;
+            break;
+          }
+        }
+      }
       if (
-        !interaction.member.permissions.has(Permissions.FLAGS.ADMINISTRATOR)
+        !interaction.member.permissions.has(Permissions.FLAGS.ADMINISTRATOR) &&
+        !allow
       ) {
         return interaction.reply({
           content:
@@ -23,7 +40,6 @@ module.exports = {
       }
       await interaction.deferReply({ ephemeral: true });
 
-      const guildId = interaction.guildId;
       // const userId = interaction.member.id;
 
       let options = [];

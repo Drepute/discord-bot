@@ -2,13 +2,19 @@ require("dotenv").config();
 
 const axios = require("axios");
 const { Op, QueryTypes } = require("sequelize");
+const { ethers } = require("ethers");
 
+const { directMintTxFnc } = require("./gassLessTnx/index");
 const {
   getBadgeVoucherCreationInfo,
   createBadgeVoucher,
+  postDirectMint,
 } = require("./daoToolServerApis.js");
+const { getSecretValue } = require("../secret");
 const db = require("../db");
 const api = require("../constants/api");
+
+const ADMIN_PRIVATE_KEY_NAME = "ADMIN_PRIVATE_KEY";
 
 const getTrackableChannels = async (guild) => {
   // list of event with channelId with active event
@@ -45,7 +51,8 @@ const createEvent = async (
   badgeTokenType,
   badgeMetadataHash,
   badgeCollectionName,
-  badgeTypeName
+  badgeTypeName,
+  isParticipationBadge
 ) => {
   const event = await db.Event.create({
     title,
@@ -60,6 +67,7 @@ const createEvent = async (
     badgeCollectionName,
     badgeTypeName,
     active: true,
+    participationBadge: isParticipationBadge ? true : false,
   });
 
   return event;
@@ -197,49 +205,26 @@ const postEventProcess = async (eventId) => {
   console.log("voucherCreationInfo", voucherCreationInfo);
   console.log("Initiating badge voucher creation...");
 
-  const badgeTokenType = event.badgeTokenType;
-  const badgeMetadataHash = event.badgeMetadataHash;
+  const dao = voucherCreationInfo["dao"];
+  const daoDiscord = dao.discord;
+  const directMint = daoDiscord.direct_mint;
 
-  let idx = 0;
-  // voucher creation max batch length on contract
-  const thresholdNumber = 24;
-  while (idx < voucherCreationInfo["data"].length) {
-    const voucherBody = {
-      chain: voucherCreationInfo.chain,
-      contractAddress: event.contractAddress,
-      memberTokenIdArr: [],
-      badgeTypeArr: [],
-      tokenUriArr: [],
-      nonceArr: [],
-      dataArr: [],
+  let uploadBadgeDetail;
+  if (event.participationBadge) {
+    const uploadBadgeReqBody = {
+      dao_name: dao.name,
+      dao_logo_url: dao.logo_url,
+      event_title: event.title,
+      event_date: event.createdAt,
     };
 
-    while (idx < voucherCreationInfo["data"].length) {
-      const item = voucherCreationInfo["data"][idx];
-      voucherBody.badgeTypeArr.push(badgeTokenType);
-      voucherBody.tokenUriArr.push(badgeMetadataHash);
-      voucherBody.dataArr.push(0);
-      voucherBody.memberTokenIdArr.push(item.token_id);
-      voucherBody.nonceArr.push(item.nonce);
-
-      if ((idx + 1) % thresholdNumber === 0) {
-        idx += 1;
-        break;
-      }
-
-      idx += 1;
-    }
-
-    console.log(voucherBody, idx);
-
-    let signedVoucher;
     try {
       const res = await axios.post(
-        `${api.LAMBDA_URL}/badge-voucher`,
-        voucherBody
+        `${api.ARWEAVE_SERVER_URL}/participation-badge`,
+        uploadBadgeReqBody
       );
-      signedVoucher = res.data.signed_voucher;
-      console.info("signedVoucher", signedVoucher);
+      uploadBadgeDetail = res.data;
+      console.info("uploadBadgeDetail", uploadBadgeDetail);
     } catch (error) {
       let err;
       if (error.response) {
@@ -254,32 +239,207 @@ const postEventProcess = async (eventId) => {
         // Something happened in setting up the request that triggered an Error
         err = `error.message: ${error.message}`;
       }
-      console.error("signedVoucher", err);
+      console.error(err);
     }
 
-    if (!signedVoucher) {
+    if (!uploadBadgeDetail) {
       console.error(
-        `[postEventProcess][signedVoucher] Could not create a signed_voucher`
+        `[participation badge][uploadBadge] Badge could not be uploaded! EVENT: ${JSON.stringify(
+          event
+        )}`
       );
       return null;
     }
+  }
 
-    const reqBody = {
-      dao_uuid: voucherCreationInfo.dao_uuid,
-      metadata_hash: badgeMetadataHash,
-      signed_voucher: signedVoucher,
-    };
+  const badgeTokenType = event.participationBadge ? 2 : event.badgeTokenType;
+  const badgeMetadataHash = event.participationBadge
+    ? uploadBadgeDetail.metadata
+    : event.badgeMetadataHash;
 
-    const badgeVoucher = await createBadgeVoucher(reqBody);
+  let idx = 0;
+  // voucher creation max batch length on contract
+  const thresholdNumber = 24;
+  while (idx < voucherCreationInfo["data"].length) {
+    if (!directMint) {
+      const voucherBody = {
+        chain: voucherCreationInfo.chain,
+        contractAddress: event.contractAddress,
+        memberTokenIdArr: [],
+        badgeTypeArr: [],
+        tokenUriArr: [],
+        nonceArr: [],
+        dataArr: [],
+      };
 
-    if (!badgeVoucher) {
-      console.error(
-        `[postEventProcess][createBadgeVoucher] Could not create badge voucher in the backend`
+      while (idx < voucherCreationInfo["data"].length) {
+        const item = voucherCreationInfo["data"][idx];
+        voucherBody.badgeTypeArr.push(badgeTokenType);
+        voucherBody.tokenUriArr.push(badgeMetadataHash);
+        voucherBody.dataArr.push(0);
+        voucherBody.memberTokenIdArr.push(item.token_id);
+        voucherBody.nonceArr.push(item.nonce);
+
+        if ((idx + 1) % thresholdNumber === 0) {
+          idx += 1;
+          break;
+        }
+
+        idx += 1;
+      }
+
+      console.log(voucherBody, idx);
+
+      let signedVoucher;
+      try {
+        const res = await axios.post(
+          `${api.LAMBDA_URL}/badge-voucher`,
+          voucherBody
+        );
+        signedVoucher = res.data.signed_voucher;
+        console.info("signedVoucher", signedVoucher);
+      } catch (error) {
+        let err;
+        if (error.response) {
+          // Request made and server responded
+          err = `data:${JSON.stringify(error.response.data)}, status:${
+            error.response.status
+          }`;
+        } else if (error.request) {
+          // The request was made but no response was received
+          err = `error.request: ${error.request}`;
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          err = `error.message: ${error.message}`;
+        }
+        console.error("signedVoucher", err);
+      }
+
+      if (!signedVoucher) {
+        console.error(
+          `[postEventProcess][signedVoucher] Could not create a signed_voucher`
+        );
+        return null;
+      }
+
+      const reqBody = {
+        dao_uuid: dao.uuid,
+        metadata_hash: badgeMetadataHash,
+        signed_voucher: signedVoucher,
+      };
+
+      if (event.participationBadge) {
+        reqBody.event_info = {
+          event_name: event.title,
+          event_date: event.createdAt,
+        };
+        reqBody.participation_badge_image = uploadBadgeDetail.media;
+      }
+
+      const badgeVoucher = await createBadgeVoucher(reqBody);
+
+      if (!badgeVoucher) {
+        console.error(
+          `[postEventProcess][createBadgeVoucher] Could not create badge voucher in the backend`
+        );
+        return null;
+      }
+
+      console.info("badgeVoucher", badgeVoucher);
+    } else {
+      const chain = voucherCreationInfo.chain;
+      const keyCreds = await getSecretValue("wallet-keys");
+      const biconomyCreds = await getSecretValue("biconomy");
+      const rpcCreds = await getSecretValue("rpc_urls");
+      const wallet = new ethers.Wallet(keyCreds[ADMIN_PRIVATE_KEY_NAME]);
+      const adminArr = wallet.address;
+      const contractAddress = dao.contract_address;
+      const funcApi = {
+        test: {
+          id: biconomyCreds["TEST_ID"],
+          key: biconomyCreds["TEST_KEY"],
+        },
+        main: {
+          id: biconomyCreds["MAIN_ID"],
+          key: biconomyCreds["MAIN_KEY"],
+        },
+      };
+      const rpcUrl = {
+        test: rpcCreds["ALCHEMY_POLYGON_MUMBAI"],
+        main: rpcCreds["ALCHEMY_POLYGON_MAIN"],
+      };
+      const routerAddr = {
+        main: "0xB9Acf5287881160e8CE66b53b507F6350d7a7b1B",
+        test: "0x1C6D20042bfc8474051Aba9FB4Ff85880089A669",
+      };
+      const arrayInfo = {
+        memberTokenIdArr: [],
+        badgeTypeArr: [],
+        tokenUriArr: [],
+        dataArr: [],
+      };
+      const discord_id_arr = [];
+
+      while (idx < voucherCreationInfo["data"].length) {
+        const item = voucherCreationInfo["data"][idx];
+        arrayInfo.badgeTypeArr.push(badgeTokenType);
+        arrayInfo.tokenUriArr.push(badgeMetadataHash);
+        arrayInfo.dataArr.push(0);
+        arrayInfo.memberTokenIdArr.push(item.token_id);
+
+        discord_id_arr.push(item.user_id);
+
+        if ((idx + 1) % thresholdNumber === 0) {
+          idx += 1;
+          break;
+        }
+
+        idx += 1;
+      }
+
+      console.log("arrayInfo", arrayInfo);
+
+      const { status } = await directMintTxFnc(
+        adminArr,
+        chain === "main" ? 137 : 80001,
+        routerAddr[chain],
+        contractAddress,
+        arrayInfo.memberTokenIdArr,
+        arrayInfo.badgeTypeArr,
+        arrayInfo.dataArr,
+        arrayInfo.tokenUriArr,
+        funcApi[chain].key,
+        funcApi[chain].id,
+        keyCreds[ADMIN_PRIVATE_KEY_NAME],
+        rpcUrl[chain]
       );
-      return null;
-    }
 
-    console.info("badgeVoucher", badgeVoucher);
+      if (status) {
+        const reqBody = {
+          dao_uuid: dao.uuid,
+          metadata_hash: badgeMetadataHash,
+          badge_type: event.participationBadge
+            ? "participation_badge"
+            : "custom_badge",
+          discord_id_arr: discord_id_arr,
+          event_info: { event_name: event.title, event_date: event.createdAt },
+          participation_badge_image: event.participationBadge
+            ? uploadBadgeDetail.media
+            : null,
+        };
+
+        const badge = await postDirectMint(reqBody);
+
+        if (!badge) {
+          console.error(
+            `[postEventProcess][directMint] Could not create badge using directMint in the backend`
+          );
+          return null;
+        }
+
+        console.info("badge", badge);
+      }
+    }
   }
 
   return voucherCreationInfo;

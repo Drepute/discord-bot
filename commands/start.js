@@ -7,6 +7,7 @@ const {
   // Intents,
   // Client,
 } = require("discord.js");
+const { getDao } = require("../utils/daoToolServerApis.js");
 const { getTrackableChannels } = require("../utils/trackvc");
 // const client = require("../index");
 
@@ -46,10 +47,29 @@ module.exports = {
         .setMaxValue(100)
         .setRequired(true)
     ),
+
   async execute(interaction) {
     if (interaction.inGuild()) {
+      const guildId = interaction.guildId;
+      const dao = await getDao(guildId);
+      const allowedRoles = dao.discord.allowed_roles_for_commands?.map(
+        (item) => item.discord_role_id
+      );
+      console.info("allowedRoles", allowedRoles);
+      let allow = false;
+      if (allowedRoles !== undefined) {
+        for (const role of interaction.member.roles.cache) {
+          console.log("role_id", role[0]);
+          if (allowedRoles.includes(role[0])) {
+            allow = true;
+            break;
+          }
+        }
+      }
+      console.log("allow", allow);
       if (
-        !interaction.member.permissions.has(Permissions.FLAGS.ADMINISTRATOR)
+        !interaction.member.permissions.has(Permissions.FLAGS.ADMINISTRATOR) &&
+        !allow
       ) {
         return interaction.reply({
           content:
