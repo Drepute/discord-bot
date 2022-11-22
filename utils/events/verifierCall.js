@@ -1,16 +1,18 @@
 const { eventListener } = require("./eventListener");
 const ethers = require("ethers");
 const { managerAbi } = require("./abi/manager");
-const { ALCHEMY_MATIC_MAINNET } = require("../../constants/api");
+const {
+  ALCHEMY_MATIC_MAINNET,
+  POLYGON_API_KEY,
+} = require("../../constants/api");
 var axios = require("axios");
 var qs = require("qs");
 
 const polygonVerifierCall = async (proxyAddress) => {
-  console.log("Contract Address", proxyAddress);
   const data = qs.stringify({
     module: "contract",
     action: "verifyproxycontract",
-    apikey: "NWWHF4FZKKKKYZQ17KCMEH3SX5FUF4MBGE",
+    apikey: POLYGON_API_KEY,
     address: proxyAddress,
   });
   const config = {
@@ -21,10 +23,9 @@ const polygonVerifierCall = async (proxyAddress) => {
     },
     data: data,
   };
-  console.log("configs", config);
+
   axios(config)
     .then(function (response) {
-      console.log("results", JSON.stringify(response.data));
       return JSON.stringify(response.data);
     })
     .catch(function (error) {
