@@ -211,6 +211,50 @@ const getGuildMember = async (GUILD_ID, USER_ID) => {
   return response;
 };
 
+const removeBotFromGuild = async (client, guildId) => {
+  const guilds = await client.guilds.fetch();
+  const guildsPromise = guilds.map((guild) => guild.fetch());
+  const guildsResolved = await Promise.all(guildsPromise);
+  let selectedGuild = null;
+  for (let i = 0; i < guildsResolved.length; i++) {
+    if (guildId === guildsResolved[i].id) {
+      selectedGuild = guildsResolved[i];
+      break;
+    }
+  }
+
+  if (selectedGuild) {
+    console.log("[removeBotFromGuild]", selectedGuild.id, selectedGuild.name);
+    try {
+      await selectedGuild.leave();
+      return {
+        status: true,
+        response: {
+          success: true,
+          data: {},
+        },
+      };
+    } catch (error) {
+      console.log("[removeBotFromGuild] Error", error);
+      return {
+        status: false,
+        response: {
+          success: false,
+          data: {},
+        },
+      };
+    }
+  } else {
+    return {
+      status: true,
+      response: {
+        success: true,
+        message: "No guild with this id found",
+      },
+    };
+  }
+};
+
 module.exports = {
   deployCommands,
   deployCommandsToAllServers,
@@ -219,4 +263,5 @@ module.exports = {
   getAccessToken,
   getUserGuilds,
   getGuildMember,
+  removeBotFromGuild,
 };

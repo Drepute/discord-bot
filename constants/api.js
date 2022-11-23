@@ -11,6 +11,7 @@ const api = {
     daoWithGuild: "/dao/daoWithGuild",
     badgeVoucherCreationInfo: "/discord/badge_voucher_creation_info",
     discord: "/discord",
+    discordRemove: "/discord/remove",
     createBadgeVoucher: "/badge/create_badge_voucher",
   },
   DAO_TOOL_BASE_URL: process.env.DAO_TOOL_BASE_URL,
