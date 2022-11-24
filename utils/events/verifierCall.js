@@ -7,6 +7,7 @@ const {
 } = require("../../constants/api");
 var axios = require("axios");
 var qs = require("qs");
+const { getSecretValue } = require("../../secret");
 
 const polygonVerifierCall = async (proxyAddress) => {
   const data = qs.stringify({
@@ -34,6 +35,8 @@ const polygonVerifierCall = async (proxyAddress) => {
 };
 
 const proxyContractVerifier = () => {
+    const rpcCreds = await getSecretValue("rpc_urls");
+const ALCHEMY_MATIC_MAINNET = rpcCreds["ALCHEMY_POLYGON_MAIN"];
   const managerInstance = new ethers.Contract(
     "0xDA6F4387C344f1312439E05E9f9580882abA6958",
     managerAbi,
