@@ -29,6 +29,7 @@
     "discord.js": "^13.7.0",
     "dotenv": "^16.0.0",
     "env-cmd": "^10.1.0",
+    "ethers": "^5.7.2",
     "express": "^4.18.1",
     "mysql2": "^2.3.3",
     "node-schedule": "^2.1.0",
