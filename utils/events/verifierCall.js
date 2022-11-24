@@ -34,9 +34,9 @@ const polygonVerifierCall = async (proxyAddress) => {
     });
 };
 
-const proxyContractVerifier = () => {
-    const rpcCreds = await getSecretValue("rpc_urls");
-const ALCHEMY_MATIC_MAINNET = rpcCreds["ALCHEMY_POLYGON_MAIN"];
+const proxyContractVerifier = async () => {
+  const rpcCreds = await getSecretValue("rpc_urls");
+  const ALCHEMY_MATIC_MAINNET = rpcCreds["ALCHEMY_POLYGON_MAIN"];
   const managerInstance = new ethers.Contract(
     "0xDA6F4387C344f1312439E05E9f9580882abA6958",
     managerAbi,
