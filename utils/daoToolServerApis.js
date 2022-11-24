@@ -187,10 +187,7 @@ const removeBotFromBackend = async (reqBody) => {
   try {
     const res = await apiClient.post(
       `${api.BASE_URL}${api.ROUTES.discordRemove}`,
-      reqBody,
-      {
-        doNotAddAuthToken: false,
-      }
+      reqBody
     );
 
     if (res.data.success) {

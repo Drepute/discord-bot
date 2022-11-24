@@ -9,15 +9,15 @@ function addAuthToken(config) {
 }
 
 // adds auth token in each request. to disable this add a doNotAddAuthToken property in config
-axios.interceptors.request.use(
-  (request) => {
-    // console.log("request", getToken());
-    request.headers["Authorization"] = `Bearer ${getToken()}`;
-    return request;
-  },
-  null,
-  { runWhen: addAuthToken }
-);
+// axios.interceptors.request.use(
+//   (request) => {
+//     // console.log("request", getToken());
+//     request.headers["Authorization"] = `Bearer ${getToken()}`;
+//     return request;
+//   },
+//   null,
+//   { runWhen: addAuthToken }
+// );
 
 console.log(
   "createAuthRefreshInterceptor",
@@ -34,8 +34,8 @@ const refreshAuthLogic = (failedRequest) =>
       doNotAddAuthToken: true,
     })
     .then((tokenRefreshResponse) => {
-      console.log("token after refresh ", tokenRefreshResponse.data.token);
-      updateToken(tokenRefreshResponse.data.token);
+      console.log("token after refresh ", tokenRefreshResponse.data.data.token);
+      updateToken(tokenRefreshResponse.data.data.token);
       failedRequest.response.config.headers["Authorization"] =
         "Bearer " + tokenRefreshResponse.data.data.token;
       return Promise.resolve();
