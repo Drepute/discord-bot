@@ -56,6 +56,7 @@ const sendTransaction = async ({
           2000
         );
         console.log("receipt", receipt);
+        console.log("logs_length", receipt?.logs.length);
         try {
           if (receipt?.logs.length === 4) {
             const badge = await postDirectMint(reqBody);
@@ -144,14 +145,14 @@ const directMintTxFnc = async (
 
   let forwarder = await getBiconomyForwarderConfig(networkId);
 
-  console.log("forwarder", forwarder);
+  // console.log("forwarder", forwarder);
 
   let forwarderContract = new web3.eth.Contract(
     forwarder.abi,
     forwarder.address
   );
 
-  console.log("forwarderContract", forwarderContract);
+  // console.log("forwarderContract", forwarderContract);
 
   const batchNonce = await forwarderContract.methods
     .getNonce(userAddress, 0)
