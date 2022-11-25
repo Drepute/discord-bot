@@ -57,17 +57,24 @@ const sendTransaction = async ({
         );
         console.log("receipt", receipt);
         console.log("logs_length", receipt?.logs.length);
+        const func_routed_sig =
+          "0x3b8298a2da8761c86c51c361b8a65b9f7c7219d917e3bde452b3ddb850dc5d22";
         try {
-          if (receipt?.logs.length === 4) {
-            const badge = await postDirectMint(reqBody);
+          for (let item of receipt.logs) {
+            const sig = item.topics[0];
+            if (sig === func_routed_sig) {
+              const badge = await postDirectMint(reqBody);
 
-            if (!badge) {
-              console.error(
-                `[postEventProcess][directMint] Could not create badge using directMint in the backend`
-              );
-              return null;
+              if (!badge) {
+                console.error(
+                  `[postEventProcess][directMint] Could not create badge using directMint in the backend`
+                );
+                return null;
+              }
+              console.info("badge", badge);
+
+              break;
             }
-            console.info("badge", badge);
           }
 
           return { status: false, response: receipt };
@@ -104,9 +111,9 @@ const directMintTxFnc = async (
 ) => {
   const web3 = new Web3(new Provider(privKey, rpcUrl));
   let contract = new web3.eth.Contract(routerAbi, routerAddress);
-  console.log("contract", contract);
+  // console.log("contract", contract);
   const proxyContract = new web3.eth.Contract(pocpAbi, pocpProxyAddress);
-  console.log("proxyContract", proxyContract);
+  // console.log("proxyContract", proxyContract);
   let functionSignature = contract.methods
     .routeRequest({
       to: pocpProxyAddress,

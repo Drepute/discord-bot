@@ -445,7 +445,7 @@ const postEventProcess = async (eventId) => {
         postDirectMint
       );
 
-      await new Promise((r) => setTimeout(r, 10000));
+      await new Promise((r) => setTimeout(r, 5000));
     }
   }
 
