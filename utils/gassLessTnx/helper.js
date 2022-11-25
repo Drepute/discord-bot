@@ -1449,11 +1449,11 @@ const getContractAddresses = async (networkId) => {
 
   contractAddresses.biconomyForwarderAddress =
     systemInfo.biconomyForwarderAddress;
-  console.log(
-    "Response JSON " + JSON.stringify(systemInfo),
-    systemInfo.biconomyForwarderAddress,
-    contractAddresses
-  );
+  // console.log(
+  //   "Response JSON " + JSON.stringify(systemInfo),
+  //   systemInfo.biconomyForwarderAddress,
+  //   contractAddresses
+  // );
   return contractAddresses;
 };
 

@@ -21,6 +21,8 @@ const sendTransaction = async ({
   apiId,
   to,
   web3,
+  reqBody,
+  postDirectMint,
 }) => {
   let params;
   if (domainSeparator) {
@@ -55,8 +57,16 @@ const sendTransaction = async ({
         );
         console.log("receipt", receipt);
         try {
-          if (receipt?.logs.lengths === 4) {
-            return { status: true, response: receipt };
+          if (receipt?.logs.length === 4) {
+            const badge = await postDirectMint(reqBody);
+
+            if (!badge) {
+              console.error(
+                `[postEventProcess][directMint] Could not create badge using directMint in the backend`
+              );
+              return null;
+            }
+            console.info("badge", badge);
           }
 
           return { status: false, response: receipt };
@@ -87,11 +97,15 @@ const directMintTxFnc = async (
   apiKey,
   apiId,
   privKey,
-  rpcUrl
+  rpcUrl,
+  reqBody,
+  postDirectMint
 ) => {
   const web3 = new Web3(new Provider(privKey, rpcUrl));
   let contract = new web3.eth.Contract(routerAbi, routerAddress);
+  console.log("contract", contract);
   const proxyContract = new web3.eth.Contract(pocpAbi, pocpProxyAddress);
+  console.log("proxyContract", proxyContract);
   let functionSignature = contract.methods
     .routeRequest({
       to: pocpProxyAddress,
@@ -107,6 +121,8 @@ const directMintTxFnc = async (
         .encodeABI(),
     })
     .encodeABI();
+
+  console.log("functionSignature", functionSignature);
 
   let txGas = await contract.methods
     .routeRequest({
@@ -124,17 +140,23 @@ const directMintTxFnc = async (
     })
     .estimateGas({ from: userAddress });
 
+  console.log("txGas", txGas);
+
   let forwarder = await getBiconomyForwarderConfig(networkId);
+
+  console.log("forwarder", forwarder);
 
   let forwarderContract = new web3.eth.Contract(
     forwarder.abi,
     forwarder.address
   );
 
+  console.log("forwarderContract", forwarderContract);
+
   const batchNonce = await forwarderContract.methods
     .getNonce(userAddress, 0)
     .call();
-  console.log(batchNonce);
+  console.log("batchNonce", batchNonce);
   const gasLimitNum = Number(txGas);
   const to = routerAddress;
 
@@ -147,9 +169,15 @@ const directMintTxFnc = async (
     data: functionSignature,
   });
 
+  console.log("request", request);
+
   const domainSeparator = await getDomainSeperator(networkId);
 
+  console.log("domainSeparator", domainSeparator);
+
   const dataToSign = await getDataToSignForEIP712(request, networkId);
+
+  console.log("dataToSign", dataToSign);
 
   web3.currentProvider.send(
     {
@@ -161,6 +189,7 @@ const directMintTxFnc = async (
     async function (error, response) {
       console.info(`User signature is ${response.result}`);
       if (error || (response && response.error)) {
+        console.error("error", error || response?.error);
         return { status: true, response: error || response?.error };
       } else if (response && response.result) {
         let sig = response.result;
@@ -173,6 +202,8 @@ const directMintTxFnc = async (
           signatureType: "EIP712_SIGN",
           apiKey,
           apiId,
+          reqBody,
+          postDirectMint,
         });
       }
     }

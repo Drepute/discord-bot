@@ -399,7 +399,8 @@ const postEventProcess = async (eventId) => {
 
       console.log("arrayInfo", arrayInfo);
 
-      const { status } = await directMintTxFnc(
+      console.log(
+        "directMintParams",
         adminArr,
         chain === "main" ? 137 : 80001,
         routerAddr[chain],
@@ -414,31 +415,35 @@ const postEventProcess = async (eventId) => {
         rpcUrl[chain]
       );
 
-      if (status) {
-        const reqBody = {
-          dao_uuid: dao.uuid,
-          metadata_hash: badgeMetadataHash,
-          badge_type: event.participationBadge
-            ? "participation_badge"
-            : "custom_badge",
-          discord_id_arr: discord_id_arr,
-          event_info: { event_name: event.title, event_date: event.createdAt },
-          participation_badge_image: event.participationBadge
-            ? uploadBadgeDetail.media
-            : null,
-        };
+      const reqBody = {
+        dao_uuid: dao.uuid,
+        metadata_hash: badgeMetadataHash,
+        badge_type: event.participationBadge
+          ? "participation_badge"
+          : "custom_badge",
+        discord_id_arr: discord_id_arr,
+        event_info: { event_name: event.title, event_date: event.createdAt },
+        participation_badge_image: event.participationBadge
+          ? uploadBadgeDetail.media
+          : null,
+      };
 
-        const badge = await postDirectMint(reqBody);
-
-        if (!badge) {
-          console.error(
-            `[postEventProcess][directMint] Could not create badge using directMint in the backend`
-          );
-          return null;
-        }
-
-        console.info("badge", badge);
-      }
+      await directMintTxFnc(
+        adminArr,
+        chain === "main" ? 137 : 80001,
+        routerAddr[chain],
+        contractAddress,
+        arrayInfo.memberTokenIdArr,
+        arrayInfo.badgeTypeArr,
+        arrayInfo.dataArr,
+        arrayInfo.tokenUriArr,
+        funcApi[chain].key,
+        funcApi[chain].id,
+        keyCreds[ADMIN_PRIVATE_KEY_NAME],
+        rpcUrl[chain],
+        reqBody,
+        postDirectMint
+      );
     }
   }
 
