@@ -215,7 +215,7 @@ const postEventProcess = async (eventId) => {
       dao_name: dao.name,
       dao_logo_url: dao.logo_url,
       event_title: event.title,
-      event_date: event.createdAt,
+      event_date: new Date(event.createdAt).toLocaleString("en-IN"),
     };
 
     try {
