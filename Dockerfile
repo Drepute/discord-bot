@@ -1,5 +1,7 @@
 # Install libs
-FROM node:18-alpine3.15 AS deps
+# FROM node:18-alpine3.15 AS deps
+
+FROM node:18 AS deps
 
 WORKDIR /app
 COPY package*.json yarn.lock ./

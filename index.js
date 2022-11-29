@@ -63,6 +63,7 @@ app.use(cors({ origin: "*" }));
 app.use(BASE_PATH, router);
 
 const db = require("./db");
+const { proxyContractVerifier } = require("./utils/events/verifierCall");
 // DB Init
 // This will run .sync() only if database name ends with '_local'
 db.sequelize.sync({
@@ -770,5 +771,6 @@ app.use(function (err, req, res, next) {
 });
 
 app.listen(PORT, async () => {
+  await proxyContractVerifier();
   console.log(`Rep3 Discord Bot App listening on port ${PORT}`);
 });
