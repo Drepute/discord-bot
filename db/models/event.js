@@ -23,6 +23,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    participationBadge: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     duration: {
       type: DataTypes.INTEGER,
       allowNull: false,

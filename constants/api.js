@@ -12,10 +12,12 @@ const api = {
     badgeVoucherCreationInfo: "/discord/badge_voucher_creation_info",
     discord: "/discord",
     createBadgeVoucher: "/badge/create_badge_voucher",
+    directMint: "/badge/direct_mint",
   },
   DAO_TOOL_BASE_URL: process.env.DAO_TOOL_BASE_URL,
   LAMBDA_URL: process.env.LAMBDA_URL,
   DISCORD_REDIRECT_URI: process.env.DISCORD_REDIRECT_URI,
+  ARWEAVE_SERVER_URL: process.env.ARWEAVE_SERVER_URL,
   // ALCHEMY_MATIC_MAINNET: process.env.ALCHEMY_MATIC_MAINNET,
   POLYGON_API_KEY: process.env.POLYGON_API_KEY,
 };

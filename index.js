@@ -51,7 +51,7 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 // const GUILD_ID = process.env.GUILD_ID;
 
 const ENV = process.env.NODE_ENV;
-const PORT = ENV === "dev" ? 3000 : 5000;
+const PORT = ENV === "dev" ? 3002 : 5000;
 const BASE_PATH = "/discord_bot";
 
 // Create an express app
@@ -235,11 +235,22 @@ client.on("interactionCreate", async (interaction) => {
         let options = [];
         try {
           const dao = await getDao(guildId);
+          const daoDiscord = dao.discord;
           const badgeCollections = await getBadgeTypes(dao.uuid);
 
-          if (!badgeCollections || !badgeCollections.length) {
+          if (
+            (!badgeCollections || !badgeCollections.length) &&
+            !daoDiscord.participation_badge_active
+          ) {
             return await interaction.followUp({
               content: "Could not fetch badge types! Try again later.",
+            });
+          }
+
+          if (daoDiscord.participation_badge_active) {
+            options.push({
+              label: `Participation Badge`,
+              value: `None | None | None | None | 1`,
             });
           }
 
@@ -247,7 +258,7 @@ client.on("interactionCreate", async (interaction) => {
             for (const bt of bc.badge_types) {
               options.push({
                 label: `${bc.type} | ${bt.name}`,
-                value: `${bc.token_type} | ${bt.metadata_hash} | ${bc.type} | ${bt.name}`,
+                value: `${bc.token_type} | ${bt.metadata_hash} | ${bc.type} | ${bt.name} | 0`,
               });
             }
           }
@@ -312,6 +323,7 @@ client.on("interactionCreate", async (interaction) => {
         const badgeMetadataHash = badgeInfo[1].trim();
         const badgeType = badgeInfo[2].trim();
         const badgeLevel = badgeInfo[3].trim();
+        const isParticipationBadge = parseInt(badgeInfo[4].trim());
         const footer = interaction.message.embeds[0].footer.text;
         const channelInfo =
           interaction.message.embeds[0].fields[0].value.split("|");
@@ -338,7 +350,8 @@ client.on("interactionCreate", async (interaction) => {
           badgeTokenType,
           badgeMetadataHash,
           badgeType,
-          badgeLevel
+          badgeLevel,
+          isParticipationBadge
         );
         console.log(`New Event Created:\n${JSON.stringify(event, null, 2)}`);
 
@@ -371,8 +384,12 @@ client.on("interactionCreate", async (interaction) => {
               value: channelName,
             },
             {
-              name: "Participation Badge",
-              value: `${badgeType} | ${badgeLevel}`,
+              name: isParticipationBadge
+                ? "Participation Badge"
+                : "Custom Badge",
+              value: isParticipationBadge
+                ? `true`
+                : `${badgeType} | ${badgeLevel}`,
             }
           );
 
@@ -382,7 +399,11 @@ client.on("interactionCreate", async (interaction) => {
           components: [],
         });
         await interaction.followUp({
-          content: `Started tracking ${channelName} voice channel for the next ${duration} minutes. Members who stay in the channel for more than ${participantThreshold}% of the total tracking duration will receive a badge of type ${badgeType} and level ${badgeLevel}.`,
+          content: `Started tracking \`${channelName}\` voice channel for the next \`${duration} minutes\`. Members who stay in the channel for more than \`${participantThreshold}%\` of the total tracking duration will receive a badge of type ${
+            isParticipationBadge
+              ? `\`Participation Badge\``
+              : `\`${badgeType} and level ${badgeLevel}\``
+          }.`,
           ephemeral: true,
         });
 
@@ -404,7 +425,15 @@ client.on("interactionCreate", async (interaction) => {
               const mentions = eligibleParticipants.data
                 .map((item) => `<@${item.user_id}>`)
                 .join(" ");
-              const content = `\n${mentions}\n\nYou have been issued \`${badgeType} | ${badgeLevel}\` badge for participating in \`${event.title}\` event. Please claim your badge using the rep3 [app](${api.DAO_TOOL_BASE_URL}).`;
+              const content = `\n${mentions}\n\nYou have been issued ${
+                isParticipationBadge
+                  ? `\`Participation Badge\``
+                  : `\`${badgeType} | ${badgeLevel} badge\``
+              } for participating in \`${
+                event.title
+              }\` event. Please claim your badge using the rep3 [app](${
+                api.DAO_TOOL_BASE_URL
+              }).`;
               await interaction.followUp({
                 content: content,
               });
@@ -442,7 +471,15 @@ client.on("interactionCreate", async (interaction) => {
           const mentions = eligibleParticipants.data
             .map((item) => `<@${item.user_id}>`)
             .join(" ");
-          const content = `${mentions}\n\nYou have been issued \`${event.badgeCollectionName} | ${event.badgeTypeName}\` badge for participating in ${event.title} event. Please claim your badge using the [rep3 app](${api.DAO_TOOL_BASE_URL}).`;
+          const content = `${mentions}\n\nYou have been issued ${
+            event.participationBadge
+              ? `\`Participation Badge\``
+              : `\`${event.badgeCollectionName} | ${event.badgeTypeName} badge\``
+          } for participating in \`${
+            event.title
+          }\` event. Please claim your badge using the [rep3 app](${
+            api.DAO_TOOL_BASE_URL
+          }).`;
           await interaction.followUp({
             content: content,
           });
