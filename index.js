@@ -24,11 +24,13 @@ const {
   getAccessToken,
   getUserGuilds,
   getGuildMember,
+  removeBotFromGuild,
 } = require("./utils/discordApi");
 const {
   getBadgeTypes,
   getDao,
   getAllDiscords,
+  removeBotFromBackend,
 } = require("./utils/daoToolServerApis.js");
 const {
   createEvent,
@@ -114,10 +116,17 @@ client.on("guildCreate", (guild) => {
   deployCommands(guild.id);
 });
 
-// client.on("guildDelete", (guild) => {
-//   console.info("Guild removed bot!", guild.id, guild.name);
-//   removeMapping(guild.id);
-// });
+client.on("guildDelete", async (guild) => {
+  console.info("[guildDelete] Guild removed bot!", guild.id, guild.name);
+  const reqBody = {
+    guild_id: guild.id,
+    only_backend: true,
+  };
+  const data = await removeBotFromBackend(reqBody);
+  if (data) {
+    console.info("[guildDelete][removeBotFromBackend]", data);
+  }
+});
 
 client.on("voiceStateUpdate", async (oldState, newState) => {
   const oldChannelId = oldState.channelId;
@@ -640,37 +649,8 @@ router.post("/removeBot", async (req, res, next) => {
     return;
   }
   const guildId = req.body.guild_id;
-  const guilds = await client.guilds.fetch();
-  const guildsPromise = guilds.map((guild) => guild.fetch());
-  const guildsResolved = await Promise.all(guildsPromise);
-  let selectedGuild = null;
-  for (let i = 0; i < guildsResolved.length; i++) {
-    if (guildId === guildsResolved[i].id) {
-      selectedGuild = guildsResolved[i];
-      break;
-    }
-  }
-  if (selectedGuild) {
-    console.log(selectedGuild.id, selectedGuild.name);
-    try {
-      await selectedGuild.leave();
-      return res.json({
-        success: true,
-        data: {},
-      });
-    } catch (error) {
-      console.log("error ", error);
-      return res.json({
-        success: false,
-        data: {},
-      });
-    }
-  } else {
-    return res.json({
-      success: true,
-      message: "No guild with this id found",
-    });
-  }
+  const { response } = await removeBotFromGuild(client, guildId);
+  res.json(response);
 });
 
 router.get("/guildRoles/:guildId", async (req, res, next) => {

@@ -215,6 +215,39 @@ const postDirectMint = async (reqBody) => {
   return data;
 };
 
+const removeBotFromBackend = async (reqBody) => {
+  let data;
+  try {
+    const res = await apiClient.post(
+      `${api.BASE_URL}${api.ROUTES.discordRemove}`,
+      reqBody
+    );
+
+    if (res.data.success) {
+      data = res.data.data;
+    } else {
+      throw new Error(JSON.stringify(res.data.errors));
+    }
+  } catch (error) {
+    let err;
+    if (error.response) {
+      // Request made and server responded
+      err = `data:${JSON.stringify(error.response.data)}, status:${
+        error.response.status
+      }`;
+    } else if (error.request) {
+      // The request was made but no response was received
+      err = `error.request: ${error.request}`;
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      err = `error.message: ${error.message}`;
+    }
+    console.error(err);
+  }
+
+  return data;
+};
+
 module.exports = {
   getBadgeTypes,
   getDao,
@@ -222,4 +255,5 @@ module.exports = {
   getAllDiscords,
   createBadgeVoucher,
   postDirectMint,
+  removeBotFromBackend,
 };

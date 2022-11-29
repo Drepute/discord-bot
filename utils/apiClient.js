@@ -34,8 +34,8 @@ const refreshAuthLogic = (failedRequest) =>
       doNotAddAuthToken: true,
     })
     .then((tokenRefreshResponse) => {
-      console.log("token after refresh ", tokenRefreshResponse.data.token);
-      updateToken(tokenRefreshResponse.data.token);
+      console.log("token after refresh ", tokenRefreshResponse.data.data.token);
+      updateToken(tokenRefreshResponse.data.data.token);
       failedRequest.response.config.headers["Authorization"] =
         "Bearer " + tokenRefreshResponse.data.data.token;
       return Promise.resolve();
