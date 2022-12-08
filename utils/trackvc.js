@@ -292,9 +292,12 @@ const postEventProcess = async (eventId) => {
 
       let signedVoucher;
       try {
+        const internalTokens = await getSecretValue("internal-tokens");
+        const headers = { "X-Authentication": internalTokens["LAMBDA_TOKEN"] };
         const res = await axios.post(
           `${api.LAMBDA_URL}/badge-voucher`,
-          voucherBody
+          voucherBody,
+          { headers: headers }
         );
         signedVoucher = res.data.signed_voucher;
         console.info("signedVoucher", signedVoucher);
