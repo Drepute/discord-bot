@@ -202,7 +202,6 @@ const postEventProcess = async (eventId) => {
 
   if (!voucherCreationInfo || !voucherCreationInfo["data"].length) return null;
 
-  console.log("voucherCreationInfo", voucherCreationInfo);
   console.log("Initiating badge voucher creation...");
 
   const dao = voucherCreationInfo["dao"];
@@ -215,7 +214,9 @@ const postEventProcess = async (eventId) => {
       dao_name: dao.name,
       dao_logo_url: dao.logo_url,
       event_title: event.title,
-      event_date: new Date(event.createdAt).toLocaleString("en-IN"),
+      event_date: new Date(event.createdAt)
+        .toLocaleString("en-IN")
+        .split(",")[0],
     };
 
     try {

@@ -347,6 +347,8 @@ client.on("interactionCreate", async (interaction) => {
         await interaction.deferUpdate();
 
         const dao = await getDao(guildId);
+        const daoDiscord = dao.discord;
+        const directMint = daoDiscord.direct_mint;
 
         const event = await createEvent(
           title,
@@ -438,11 +440,11 @@ client.on("interactionCreate", async (interaction) => {
                 isParticipationBadge
                   ? `\`Participation Badge\``
                   : `\`${badgeType} | ${badgeLevel} badge\``
-              } for participating in \`${
-                event.title
-              }\` event. Please claim your badge using the rep3 [app](${
-                api.DAO_TOOL_BASE_URL
-              }).`;
+              } for participating in \`${event.title}\` event. ${
+                directMint
+                  ? ``
+                  : `Please claim your badge using the rep3 [app](${api.DAO_TOOL_BASE_URL}).`
+              }`;
               await interaction.followUp({
                 content: content,
               });
@@ -461,6 +463,10 @@ client.on("interactionCreate", async (interaction) => {
         const eventId = parseInt(interaction.values[0]);
 
         await interaction.deferUpdate();
+
+        const dao = await getDao(guildId);
+        const daoDiscord = dao.discord;
+        const directMint = daoDiscord.direct_mint;
 
         await addParticipantEndTime(eventId, new Date());
         await endEvent(eventId);
@@ -484,11 +490,11 @@ client.on("interactionCreate", async (interaction) => {
             event.participationBadge
               ? `\`Participation Badge\``
               : `\`${event.badgeCollectionName} | ${event.badgeTypeName} badge\``
-          } for participating in \`${
-            event.title
-          }\` event. Please claim your badge using the [rep3 app](${
-            api.DAO_TOOL_BASE_URL
-          }).`;
+          } for participating in \`${event.title}\` event. ${
+            directMint
+              ? ``
+              : `Please claim your badge using the rep3 [app](${api.DAO_TOOL_BASE_URL}).`
+          }`;
           await interaction.followUp({
             content: content,
           });

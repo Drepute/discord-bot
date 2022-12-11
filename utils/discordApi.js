@@ -50,6 +50,10 @@ const deployCommandsToAllServers = async () => {
     .filter((file) => file.endsWith(".js"));
 
   for (const file of commandFiles) {
+    if (IGNORE_CMDS.includes(file.slice(0, -3))) {
+      console.log(`Command ignored: ${file}`);
+      continue;
+    }
     const command = require(`../commands/${file}`);
     commands.push(command.data.toJSON());
   }
@@ -60,11 +64,6 @@ const deployCommandsToAllServers = async () => {
   } catch (err) {
     console.error(err);
   }
-
-  rest
-    .put(Routes.applicationCommands(CLIENT_ID), { body: commands })
-    .then(() => console.log("Successfully registered application commands."))
-    .catch(console.error);
 };
 
 const clearCommandsInGuild = async (GUILD_ID) => {
