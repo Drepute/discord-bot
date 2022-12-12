@@ -56,6 +56,9 @@ const ENV = process.env.NODE_ENV;
 const PORT = ENV === "dev" ? 3002 : 5000;
 const BASE_PATH = "/discord_bot";
 
+// Start the agent before any thing else in your app
+var apm = require('elastic-apm-node').start()
+
 // Create an express app
 const app = express();
 const router = express.Router();
@@ -154,6 +157,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     try {
       await addParticipant(event, details);
     } catch (err) {
+      apm.captureError(err)
       console.error(err);
     }
   }
@@ -179,6 +183,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     try {
       await updateParticipant(participant, details);
     } catch (err) {
+      apm.captureError(err)
       console.error(err);
     }
   }
@@ -197,6 +202,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       try {
         await addParticipant(event, details);
       } catch (err) {
+        apm.captureError(err)
         console.error(err);
       }
     }
@@ -213,6 +219,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       try {
         await updateParticipant(participant, details);
       } catch (err) {
+        apm.captureError(err)
         console.error(err);
       }
     }
@@ -272,6 +279,7 @@ client.on("interactionCreate", async (interaction) => {
             }
           }
         } catch (err) {
+          apm.captureError(err)
           console.error(err.message);
         }
 
@@ -318,6 +326,7 @@ client.on("interactionCreate", async (interaction) => {
           components: [selectRow],
         });
       } catch (err) {
+        apm.captureError(err)
         console.error(err);
       }
     }
@@ -452,6 +461,7 @@ client.on("interactionCreate", async (interaction) => {
           }
         });
       } catch (err) {
+        apm.captureError(err)
         console.error(err);
       }
     }
@@ -500,6 +510,7 @@ client.on("interactionCreate", async (interaction) => {
           });
         }
       } catch (err) {
+        apm.captureError(err)
         console.error(err);
       }
     }
@@ -561,6 +572,7 @@ client.on("interactionCreate", async (interaction) => {
           ephemeral: true,
         });
       } catch (err) {
+        apm.captureError(err)
         console.error(err);
       }
     }
@@ -666,6 +678,7 @@ router.get("/guildRoles/:guildId", async (req, res, next) => {
     res.status(200).send({ data: roles });
   } catch (err) {
     next(err);
+    apm.captureError(err)
   }
 });
 
@@ -692,6 +705,7 @@ router.get("/userGuilds", async (req, res, next) => {
       .send({ data: { guilds: userGuildsRes.guilds, user: tokenRes.user } });
   } catch (err) {
     next(err);
+    apm.captureError(err)
   }
 });
 
@@ -715,6 +729,7 @@ router.get("/user", async (req, res, next) => {
       .send({ data: { token: tokenRes.token, user: tokenRes.user } });
   } catch (err) {
     next(err);
+    apm.captureError(err)
   }
 });
 
@@ -736,6 +751,7 @@ router.get("/guildMember", async (req, res, next) => {
     res.status(200).send({ guildMember: guildMemberRes.member });
   } catch (err) {
     next(err);
+    apm.captureError(err)
   }
 });
 
@@ -745,6 +761,7 @@ router.get("/discordRedirect", async (req, res, next) => {
     res.status(200).send({ data: req.query });
   } catch (err) {
     next(err);
+    apm.captureError(err)
   }
 });
 
