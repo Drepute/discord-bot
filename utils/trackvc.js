@@ -91,17 +91,21 @@ const getActiveEvent = async (channelId, guildId) => {
   return event;
 };
 
-const getAllActiveEvents = async (guildId) => {
+const getAllActiveEvents = async (guildId, order = "DESC", limit = -1) => {
   let activeEvents = await db.Event.findAll({
     where: { [Op.and]: [{ active: true }, { guildId: guildId }] },
+    order: [["createdAt", order]],
+    ...(limit !== -1 && { limit: limit }),
   });
 
   return activeEvents;
 };
 
-const getAllInactiveEvents = async (guildId) => {
+const getAllInactiveEvents = async (guildId, order = "ASC", limit = -1) => {
   let inActiveEvents = await db.Event.findAll({
     where: { [Op.and]: [{ active: false }, { guildId: guildId }] },
+    order: [["createdAt", order]],
+    ...(limit !== -1 && { limit: limit }),
   });
 
   return inActiveEvents;

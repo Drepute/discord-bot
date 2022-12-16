@@ -106,6 +106,14 @@ module.exports = {
         return;
       }
 
+      if (!options.length) {
+        return await interaction.editReply({
+          content: "No voice channel available at this moment.",
+        });
+      }
+
+      options = options.slice(0, 25);
+
       try {
         const selectRow = new MessageActionRow().addComponents(
           new MessageSelectMenu()

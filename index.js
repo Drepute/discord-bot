@@ -99,35 +99,50 @@ for (const file of commandFiles) {
 
 client.once("ready", async () => {
   console.log("Discord Client Ready!");
-  const res = await apiClient.get(
-    `${api.BASE_URL}${api.ROUTES.getAdminToken}`,
-    {
-      headers: {
-        "X-Authentication": INTERNAL_TOKEN,
-      },
-      doNotAddAuthToken: true,
+  try {
+    const res = await apiClient.get(
+      `${api.BASE_URL}${api.ROUTES.getAdminToken}`,
+      {
+        headers: {
+          "X-Authentication": INTERNAL_TOKEN,
+        },
+        doNotAddAuthToken: true,
+      }
+    );
+    if (res.data.success) {
+      console.log("access token is ", res.data.data.token);
+      updateToken(res.data.data.token);
     }
-  );
-  if (res.data.success) {
-    console.log("access token is ", res.data.data.token);
-    updateToken(res.data.data.token);
+  } catch (err) {
+    console.error("[getAdminToken] ERROR:", err);
+    apm.captureError(err);
   }
 });
 
 client.on("guildCreate", (guild) => {
-  console.info("NEW GUILD!", guild.id, guild.name);
-  deployCommands(guild.id);
+  try {
+    console.info("NEW GUILD!", guild.id, guild.name);
+    deployCommands(guild.id);
+  } catch (err) {
+    console.error("[guildCreate] ERROR:", err);
+    apm.captureError(err);
+  }
 });
 
 client.on("guildDelete", async (guild) => {
-  console.info("[guildDelete] Guild removed bot!", guild.id, guild.name);
-  const reqBody = {
-    guild_id: guild.id,
-    only_backend: true,
-  };
-  const data = await removeBotFromBackend(reqBody);
-  if (data) {
-    console.info("[guildDelete][removeBotFromBackend]", data);
+  try {
+    console.info("[guildDelete] Guild removed bot!", guild.id, guild.name);
+    const reqBody = {
+      guild_id: guild.id,
+      only_backend: true,
+    };
+    const data = await removeBotFromBackend(reqBody);
+    if (data) {
+      console.info("[guildDelete][removeBotFromBackend]", data);
+    }
+  } catch (err) {
+    console.error("[guildCreate] ERROR:", err);
+    apm.captureError(err);
   }
 });
 
@@ -192,19 +207,19 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
   if (typeof oldChannelId === "string" && typeof newChannelId === "string") {
     // for new vc (join)
     const event = await getActiveEvent(newChannelId, newState.guild.id);
-    if (event) {
-      const details = {
-        userId: newState.id,
-        displayName: newState.member.displayName,
-        sessionId: newState.sessionId,
-        joiningTime: new Date(),
-      };
-      try {
-        await addParticipant(event, details);
-      } catch (err) {
-        apm.captureError(err);
-        console.error(err);
-      }
+    if (!event) return;
+
+    const details = {
+      userId: newState.id,
+      displayName: newState.member.displayName,
+      sessionId: newState.sessionId,
+      joiningTime: new Date(),
+    };
+    try {
+      await addParticipant(event, details);
+    } catch (err) {
+      apm.captureError(err);
+      console.error(err);
     }
 
     // for previous vc (leave)
@@ -375,8 +390,11 @@ client.on("interactionCreate", async (interaction) => {
         );
         console.log(`New Event Created:\n${JSON.stringify(event, null, 2)}`);
 
-        const channel = await guild.channels.fetch([channelId]);
-        const currentParticipants = channel.members;
+        const vcChannel = await guild.channels.fetch([channelId]);
+        const commandChannel = await guild.channels.fetch([
+          interaction.channelId,
+        ]);
+        const currentParticipants = vcChannel.members;
 
         const participantsDetailList = currentParticipants.map((user) => {
           return {
@@ -418,6 +436,7 @@ client.on("interactionCreate", async (interaction) => {
           embeds: [embed],
           components: [],
         });
+
         await interaction.followUp({
           content: `Started tracking \`${channelName}\` voice channel for the next \`${duration} minutes\`. Members who stay in the channel for more than \`${participantThreshold}%\` of the total tracking duration will receive a badge of type ${
             isParticipationBadge
@@ -427,6 +446,11 @@ client.on("interactionCreate", async (interaction) => {
           ephemeral: true,
         });
 
+        // await interaction.followUp({
+        //   content: "Waiting for the event to end!",
+        //   ephemeral: true,
+        // });
+
         // schedule post event logic
         let date = new Date();
         date.setMinutes(date.getMinutes() + duration);
@@ -434,11 +458,6 @@ client.on("interactionCreate", async (interaction) => {
           if (event.active) {
             await addParticipantEndTime(event.id, new Date());
             await endEvent(event.id);
-
-            await interaction.followUp({
-              content: "Event has now ended!",
-              ephemeral: true,
-            });
 
             const eligibleParticipants = await postEventProcess(event.id);
             if (eligibleParticipants) {
@@ -454,7 +473,8 @@ client.on("interactionCreate", async (interaction) => {
                   ? ``
                   : `Please claim your badge using the rep3 [app](${api.DAO_TOOL_BASE_URL}).`
               }`;
-              await interaction.followUp({
+
+              await commandChannel.send({
                 content: content,
               });
             }
@@ -600,75 +620,90 @@ client.login(DISCORD_TOKEN);
  */
 
 router.post("/toggleBot", async (req, res, next) => {
-  success = checkInternalToken(req);
-  if (!success) {
-    res.status(401).send({ status: "Unauthorized" });
-    return;
+  try {
+    const success = checkInternalToken(req);
+    if (!success) {
+      res.status(401).send({ status: "Unauthorized" });
+      return;
+    }
+
+    const guildId = req.body.guild_id;
+    // const commands = req.body.commands;
+    const disableBot = req.body.disable_bot;
+    console.log("in toggle bot", guildId, disableBot);
+    let updateCommandResponse;
+
+    if (disableBot) {
+      updateCommandResponse = await clearCommandsInGuild(guildId);
+    } else {
+      updateCommandResponse = await deployCommands(guildId);
+    }
+
+    res.json({
+      success: updateCommandResponse,
+      data: {},
+    });
+  } catch (err) {
+    next(err);
+    apm.captureError(err);
   }
-
-  const guildId = req.body.guild_id;
-  // const commands = req.body.commands;
-  const disableBot = req.body.disable_bot;
-  console.log("in toggle bot", guildId, disableBot);
-  let updateCommandResponse;
-
-  if (disableBot) {
-    updateCommandResponse = await clearCommandsInGuild(guildId);
-  } else {
-    updateCommandResponse = await deployCommands(guildId);
-  }
-
-  res.json({
-    success: updateCommandResponse,
-    data: {},
-  });
 });
 
 router.get("/details/:guild_id", async (req, res, next) => {
-  success = checkInternalToken(req);
-  if (!success) {
-    res.status(401).send({ status: "Unauthorized" });
-    return;
-  }
-  const guildId = req.params.guild_id;
-  const guilds = await client.guilds.fetch();
-  console.log("guild are", guilds, guildId);
-  const guildsPromise = guilds.map((guild) => guild.fetch());
-  const guildsResolved = await Promise.all(guildsPromise);
-  let selectedGuild = null;
-  for (let i = 0; i < guildsResolved.length; i++) {
-    if (guildId === guildsResolved[i].id) {
-      selectedGuild = guildsResolved[i];
-      break;
+  try {
+    const success = checkInternalToken(req);
+    if (!success) {
+      res.status(401).send({ status: "Unauthorized" });
+      return;
     }
-  }
-  if (selectedGuild) {
-    const guildName = selectedGuild.name;
-    const guildIconUrl = await selectedGuild.iconURL();
-    return res.json({
-      success: true,
-      data: {
-        guild_name: guildName,
-        guild_icon_url: guildIconUrl,
-      },
-    });
-  } else {
-    return res.json({
-      success: true,
-      message: "No guild with this id found",
-    });
+    const guildId = req.params.guild_id;
+    const guilds = await client.guilds.fetch();
+    console.log("guild are", guilds, guildId);
+    const guildsPromise = guilds.map((guild) => guild.fetch());
+    const guildsResolved = await Promise.all(guildsPromise);
+    let selectedGuild = null;
+    for (let i = 0; i < guildsResolved.length; i++) {
+      if (guildId === guildsResolved[i].id) {
+        selectedGuild = guildsResolved[i];
+        break;
+      }
+    }
+    if (selectedGuild) {
+      const guildName = selectedGuild.name;
+      const guildIconUrl = await selectedGuild.iconURL();
+      return res.json({
+        success: true,
+        data: {
+          guild_name: guildName,
+          guild_icon_url: guildIconUrl,
+        },
+      });
+    } else {
+      return res.json({
+        success: true,
+        message: "No guild with this id found",
+      });
+    }
+  } catch (err) {
+    next(err);
+    apm.captureError(err);
   }
 });
 
 router.post("/removeBot", async (req, res, next) => {
-  success = checkInternalToken(req);
-  if (!success) {
-    res.status(401).send({ status: "Unauthorized" });
-    return;
+  try {
+    const success = checkInternalToken(req);
+    if (!success) {
+      res.status(401).send({ status: "Unauthorized" });
+      return;
+    }
+    const guildId = req.body.guild_id;
+    const { response } = await removeBotFromGuild(client, guildId);
+    res.json(response);
+  } catch (err) {
+    next(err);
+    apm.captureError(err);
   }
-  const guildId = req.body.guild_id;
-  const { response } = await removeBotFromGuild(client, guildId);
-  res.json(response);
 });
 
 router.get("/guildRoles/:guildId", async (req, res, next) => {

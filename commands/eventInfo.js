@@ -45,7 +45,8 @@ module.exports = {
 
       let options = [];
       try {
-        const events = await getAllInactiveEvents(guildId);
+        const events = await getAllInactiveEvents(guildId, "DESC", 25);
+        console.log("events", events);
         options = events.map((event) => {
           return {
             label: `[${event.channelName}] ${event.title}`,
@@ -56,6 +57,8 @@ module.exports = {
         console.error("[getAllInactiveEvents]", err);
         return;
       }
+
+      console.log("options", options);
 
       if (!options.length) {
         return await interaction.editReply({
