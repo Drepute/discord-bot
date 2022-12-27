@@ -52,6 +52,14 @@ module.exports = {
     if (interaction.inGuild()) {
       const guildId = interaction.guildId;
       const dao = await getDao(guildId);
+
+      if (!dao) {
+        return interaction.reply({
+          content: "This discord is not connected to any Dao.",
+          ephemeral: true,
+        });
+      }
+
       const allowedRoles = dao.discord.allowed_roles_for_commands?.map(
         (item) => item.discord_role_id
       );
