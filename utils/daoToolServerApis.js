@@ -2,6 +2,8 @@ require("dotenv").config();
 const api = require("../constants/api");
 const apiClient = require("./apiClient");
 
+const { apm } = require("../index");
+
 // const removeMapping = async (guildId) => {
 //   try {
 //     const res = await apiClient.post(
@@ -45,6 +47,7 @@ const getDao = async (guildId) => {
       err = `error.message: ${error.message}`;
     }
     console.error(err);
+    apm.captureError(error, { custom: { guildId: JSON.stringify(guildId) } });
   }
 
   return data;
@@ -77,6 +80,7 @@ const getBadgeTypes = async (daoUuid) => {
       err = `error.message: ${error.message}`;
     }
     console.error(err);
+    apm.captureError(error, { custom: { daoUuid: JSON.stringify(daoUuid) } });
   }
 
   return data;
@@ -113,6 +117,12 @@ const getBadgeVoucherCreationInfo = async (discordIdArr, contractAddress) => {
       err = `error.message: ${error.message}`;
     }
     console.error(err);
+    apm.captureError(error, {
+      custom: {
+        discordIdArr: JSON.stringify(discordIdArr),
+        contractAddress: JSON.stringify(contractAddress),
+      },
+    });
   }
 
   return data;
@@ -144,6 +154,7 @@ const getAllDiscords = async () => {
     }
     console.error(err);
     response.error = error;
+    apm.captureError(error);
   }
 
   return response;
@@ -177,6 +188,7 @@ const createBadgeVoucher = async (reqBody) => {
       err = `error.message: ${error.message}`;
     }
     console.error(err);
+    apm.captureError(error, { custom: { reqBody: JSON.stringify(reqBody) } });
   }
 
   return data;
@@ -210,6 +222,7 @@ const postDirectMint = async (reqBody) => {
       err = `error.message: ${error.message}`;
     }
     console.error(err);
+    apm.captureError(error, { custom: { reqBody: JSON.stringify(reqBody) } });
   }
 
   return data;
@@ -243,6 +256,7 @@ const removeBotFromBackend = async (reqBody) => {
       err = `error.message: ${error.message}`;
     }
     console.error(err);
+    apm.captureError(error, { custom: { reqBody: JSON.stringify(reqBody) } });
   }
 
   return data;

@@ -1,5 +1,10 @@
 require("dotenv").config();
 
+// Start the agent before any thing else in your app
+const apm = require("elastic-apm-node").start();
+
+module.exports = { apm };
+
 const schedule = require("node-schedule");
 const fs = require("node:fs");
 const {
@@ -55,9 +60,6 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const ENV = process.env.NODE_ENV;
 const PORT = ENV === "dev" ? 3002 : 5000;
 const BASE_PATH = "/discord_bot";
-
-// Start the agent before any thing else in your app
-const apm = require("elastic-apm-node").start();
 
 // Create an express app
 const app = express();
@@ -460,22 +462,24 @@ client.on("interactionCreate", async (interaction) => {
             await endEvent(event.id);
 
             const eligibleParticipants = await postEventProcess(event.id);
-            if (eligibleParticipants) {
-              const mentions = eligibleParticipants.data
+            if (eligibleParticipants && eligibleParticipants.length) {
+              const mentions = eligibleParticipants
                 .map((item) => `<@${item.user_id}>`)
                 .join(" ");
-              const content = `\n${mentions}\n\nYou have been issued ${
+              const content = `\n${mentions}\n\n`;
+              const description = `You have been issued ${
                 isParticipationBadge
                   ? `\`Participation Badge\``
                   : `\`${badgeType} | ${badgeLevel} badge\``
               } for participating in \`${event.title}\` event. ${
-                directMint
+                event.participationBadge && directMint
                   ? ``
-                  : `Please claim your badge using the rep3 [app](${api.DAO_TOOL_BASE_URL}).`
+                  : `\n\nPlease claim your badge using the rep3 [app](${api.DAO_TOOL_BASE_URL}).`
               }`;
 
               await commandChannel.send({
                 content: content,
+                embeds: [{ description: description }],
               });
             }
           }
@@ -512,21 +516,23 @@ client.on("interactionCreate", async (interaction) => {
 
         const event = await getEvent(eventId);
         const eligibleParticipants = await postEventProcess(eventId);
-        if (eligibleParticipants) {
-          const mentions = eligibleParticipants.data
+        if (eligibleParticipants && eligibleParticipants.length) {
+          const mentions = eligibleParticipants
             .map((item) => `<@${item.user_id}>`)
             .join(" ");
-          const content = `${mentions}\n\nYou have been issued ${
+          const content = `\n${mentions}\n\n`;
+          const description = `You have been issued ${
             event.participationBadge
               ? `\`Participation Badge\``
               : `\`${event.badgeCollectionName} | ${event.badgeTypeName} badge\``
           } for participating in \`${event.title}\` event. ${
-            directMint
+            event.participationBadge && directMint
               ? ``
-              : `Please claim your badge using the rep3 [app](${api.DAO_TOOL_BASE_URL}).`
+              : `\n\nPlease claim your badge using the rep3 [app](${api.DAO_TOOL_BASE_URL}).`
           }`;
           await interaction.followUp({
             content: content,
+            embeds: [{ description: description }],
           });
         }
       } catch (err) {
@@ -657,20 +663,11 @@ router.get("/details/:guild_id", async (req, res, next) => {
       return;
     }
     const guildId = req.params.guild_id;
-    const guilds = await client.guilds.fetch();
-    console.log("guild are", guilds, guildId);
-    const guildsPromise = guilds.map((guild) => guild.fetch());
-    const guildsResolved = await Promise.all(guildsPromise);
-    let selectedGuild = null;
-    for (let i = 0; i < guildsResolved.length; i++) {
-      if (guildId === guildsResolved[i].id) {
-        selectedGuild = guildsResolved[i];
-        break;
-      }
-    }
-    if (selectedGuild) {
-      const guildName = selectedGuild.name;
-      const guildIconUrl = await selectedGuild.iconURL();
+    try {
+      const guild = await client.guilds.fetch(guildId);
+      console.log(`Guild with ID: ${guildId} found!`);
+      const guildName = guild.name;
+      const guildIconUrl = guild.iconURL();
       return res.json({
         success: true,
         data: {
@@ -678,11 +675,9 @@ router.get("/details/:guild_id", async (req, res, next) => {
           guild_icon_url: guildIconUrl,
         },
       });
-    } else {
-      return res.json({
-        success: true,
-        message: "No guild with this id found",
-      });
+    } catch (error) {
+      console.error(error);
+      return res.json({ success: false, message: error.message });
     }
   } catch (err) {
     next(err);
@@ -698,7 +693,7 @@ router.post("/removeBot", async (req, res, next) => {
       return;
     }
     const guildId = req.body.guild_id;
-    const { response } = await removeBotFromGuild(client, guildId);
+    const response = await removeBotFromGuild(client, guildId);
     res.json(response);
   } catch (err) {
     next(err);

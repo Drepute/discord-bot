@@ -1,4 +1,7 @@
 require("dotenv").config();
+const AWS = require("aws-sdk");
+
+const lambda = new AWS.Lambda({ region: "us-east-1" });
 
 const axios = require("axios");
 const { Op, QueryTypes } = require("sequelize");
@@ -13,6 +16,8 @@ const {
 const { getSecretValue } = require("../secret");
 const db = require("../db");
 const api = require("../constants/api");
+
+const { apm } = require("../index");
 
 const ADMIN_PRIVATE_KEY_NAME = "ADMIN_PRIVATE_KEY";
 
@@ -191,26 +196,51 @@ const postEventProcess = async (eventId) => {
     `select userId, displayName, sum(leavingTime - joiningTime) as stayDuration from Participants where EventId = ${eventId} group by userId, displayName having stayDuration > ${threshold}`,
     { type: QueryTypes.SELECT }
   );
-  console.log("EligibleParticipants", eligibleParticipants);
+  console.log(
+    `[discord][eventID: ${eventId}] EligibleParticipants`,
+    eligibleParticipants
+  );
 
   const discordIdArr = eligibleParticipants.map((user) => user.userId);
-
   console.log(discordIdArr, event.contractAddress);
 
   const voucherCreationInfo = await getBadgeVoucherCreationInfo(
     discordIdArr,
     event.contractAddress
   );
-
   console.log("voucherCreationInfo", voucherCreationInfo);
-
-  if (!voucherCreationInfo || !voucherCreationInfo["data"].length) return null;
+  if (!voucherCreationInfo || !voucherCreationInfo["data"].length) {
+    console.log("[backend] No EligibleParticipants to process!");
+    return null;
+  }
 
   console.log("Initiating badge voucher creation...");
 
   const dao = voucherCreationInfo["dao"];
   const daoDiscord = dao.discord;
   const directMint = daoDiscord.direct_mint;
+
+  const invokeAsyncParams = {
+    FunctionName:
+      event.participationBadge && directMint
+        ? "rep3-serverless-RunTxnFunc-kuagXLQzvRq5"
+        : "rep3-serverless-BadgeVoucher-NtoQmi5SSlAM",
+    InvocationType: "Event",
+    Payload: JSON.stringify({ warmup: true }, null, 2),
+  };
+
+  const lambdaPromise = (params) => lambda.invoke(params).promise();
+
+  // invoke the lambda asynchronously to warm up the container
+  try {
+    const lambdaResponse = await lambdaPromise(invokeAsyncParams);
+    console.log(
+      "[postEventProcess] Lambda invocation was successful!",
+      JSON.stringify(lambdaResponse)
+    );
+  } catch (error) {
+    console.error("[postEventProcess] Error invoking lambda", error);
+  }
 
   let uploadBadgeDetail;
   if (event.participationBadge) {
@@ -245,6 +275,9 @@ const postEventProcess = async (eventId) => {
         err = `error.message: ${error.message}`;
       }
       console.error(err);
+      apm.captureError(error, {
+        custom: { uploadBadgeDetail: JSON.stringify(uploadBadgeDetail) },
+      });
     }
 
     if (!uploadBadgeDetail) {
@@ -262,11 +295,16 @@ const postEventProcess = async (eventId) => {
     ? uploadBadgeDetail.metadata
     : event.badgeMetadataHash;
 
+  const userProcessed = [];
   let idx = 0;
   // voucher creation max batch length on contract
   const thresholdNumber = 24;
+  const internalTokens = await getSecretValue("internal-tokens");
+  const headers = { "X-Authentication": internalTokens["LAMBDA_TOKEN"] };
   while (idx < voucherCreationInfo["data"].length) {
-    if (!directMint) {
+    // always run for custom badges
+    // run for participation badges if direct mint is disabled
+    if (!event.participationBadge || !directMint) {
       const voucherBody = {
         chain: voucherCreationInfo.chain,
         contractAddress: event.contractAddress,
@@ -276,6 +314,7 @@ const postEventProcess = async (eventId) => {
         nonceArr: [],
         dataArr: [],
       };
+      const userBatch = [];
 
       while (idx < voucherCreationInfo["data"].length) {
         const item = voucherCreationInfo["data"][idx];
@@ -285,6 +324,8 @@ const postEventProcess = async (eventId) => {
         voucherBody.memberTokenIdArr.push(item.token_id);
         voucherBody.nonceArr.push(item.nonce);
 
+        userBatch.push({ user_id: item.user_id });
+
         if ((idx + 1) % thresholdNumber === 0) {
           idx += 1;
           break;
@@ -293,12 +334,10 @@ const postEventProcess = async (eventId) => {
         idx += 1;
       }
 
-      console.log(voucherBody, idx);
+      console.log(idx, voucherBody);
 
       let signedVoucher;
       try {
-        const internalTokens = await getSecretValue("internal-tokens");
-        const headers = { "X-Authentication": internalTokens["LAMBDA_TOKEN"] };
         const res = await axios.post(
           `${api.LAMBDA_URL}/badge-voucher`,
           voucherBody,
@@ -321,13 +360,16 @@ const postEventProcess = async (eventId) => {
           err = `error.message: ${error.message}`;
         }
         console.error("signedVoucher", err);
+        apm.captureError(error, {
+          custom: { voucherBody: JSON.stringify(voucherBody) },
+        });
       }
 
       if (!signedVoucher) {
         console.error(
           `[postEventProcess][signedVoucher] Could not create a signed_voucher`
         );
-        return null;
+        continue;
       }
 
       const reqBody = {
@@ -345,57 +387,59 @@ const postEventProcess = async (eventId) => {
       }
 
       const badgeVoucher = await createBadgeVoucher(reqBody);
-
       if (!badgeVoucher) {
         console.error(
           `[postEventProcess][createBadgeVoucher] Could not create badge voucher in the backend`
         );
-        return null;
+        continue;
       }
-
+      userProcessed.push(...userBatch);
       console.info("badgeVoucher", badgeVoucher);
     } else {
       const chain = voucherCreationInfo.chain;
-      const keyCreds = await getSecretValue("wallet-keys");
-      const biconomyCreds = await getSecretValue("biconomy");
-      const rpcCreds = await getSecretValue("rpc_urls");
-      const wallet = new ethers.Wallet(keyCreds[ADMIN_PRIVATE_KEY_NAME]);
-      const adminArr = wallet.address;
+      // const keyCreds = await getSecretValue("wallet-keys");
+      // const biconomyCreds = await getSecretValue("biconomy");
+      // const rpcCreds = await getSecretValue("rpc_urls");
+      // const wallet = new ethers.Wallet(keyCreds[ADMIN_PRIVATE_KEY_NAME]);
       const contractAddress = dao.contract_address;
-      const funcApi = {
-        test: {
-          id: biconomyCreds["TEST_ID"],
-          key: biconomyCreds["TEST_KEY"],
-        },
-        main: {
-          id: biconomyCreds["MAIN_ID"],
-          key: biconomyCreds["MAIN_KEY"],
-        },
-      };
-      const rpcUrl = {
-        test: rpcCreds["ALCHEMY_POLYGON_MUMBAI"],
-        main: rpcCreds["ALCHEMY_POLYGON_MAIN"],
-      };
-      const routerAddr = {
-        main: "0xB9Acf5287881160e8CE66b53b507F6350d7a7b1B",
-        test: "0x1C6D20042bfc8474051Aba9FB4Ff85880089A669",
-      };
+      // const adminArr = wallet.address;
+      // const funcApi = {
+      //   test: {
+      //     id: biconomyCreds["TEST_ID"],
+      //     key: biconomyCreds["TEST_KEY"],
+      //   },
+      //   main: {
+      //     id: biconomyCreds["MAIN_ID"],
+      //     key: biconomyCreds["MAIN_KEY"],
+      //   },
+      // };
+      // const rpcUrl = {
+      //   test: rpcCreds["ALCHEMY_POLYGON_MUMBAI"],
+      //   main: rpcCreds["ALCHEMY_POLYGON_MAIN"],
+      // };
+      // const routerAddr = {
+      //   main: "0xB9Acf5287881160e8CE66b53b507F6350d7a7b1B",
+      //   test: "0x1C6D20042bfc8474051Aba9FB4Ff85880089A669",
+      // };
+
       const arrayInfo = {
         memberTokenIdArr: [],
         badgeTypeArr: [],
-        tokenUriArr: [],
+        tokenUris: "",
         dataArr: [],
       };
       const discord_id_arr = [];
+      const userBatch = [];
 
       while (idx < voucherCreationInfo["data"].length) {
         const item = voucherCreationInfo["data"][idx];
         arrayInfo.badgeTypeArr.push(badgeTokenType);
-        arrayInfo.tokenUriArr.push(badgeMetadataHash);
         arrayInfo.dataArr.push(0);
         arrayInfo.memberTokenIdArr.push(item.token_id);
+        arrayInfo["tokenUris"] += `${badgeMetadataHash},`;
 
         discord_id_arr.push(item.user_id);
+        userBatch.push({ user_id: item.user_id });
 
         if ((idx + 1) % thresholdNumber === 0) {
           idx += 1;
@@ -407,21 +451,77 @@ const postEventProcess = async (eventId) => {
 
       console.log("arrayInfo", arrayInfo);
 
-      console.log(
-        "directMintParams",
-        adminArr,
-        chain === "main" ? 137 : 80001,
-        routerAddr[chain],
-        contractAddress,
+      const functionArgs = [
         arrayInfo.memberTokenIdArr,
         arrayInfo.badgeTypeArr,
         arrayInfo.dataArr,
-        arrayInfo.tokenUriArr,
-        funcApi[chain].key,
-        funcApi[chain].id,
-        keyCreds[ADMIN_PRIVATE_KEY_NAME],
-        rpcUrl[chain]
-      );
+        arrayInfo.tokenUris,
+      ];
+
+      const lambdaReqBody = {
+        chain: chain,
+        contractAddress: contractAddress,
+        functionName: "batchIssueBadge",
+        functionArgs: functionArgs,
+      };
+
+      let status, response;
+      try {
+        const res = await axios.post(
+          `${api.LAMBDA_URL}/run-txn-func`,
+          lambdaReqBody,
+          { headers: headers }
+        );
+        const body = res.data;
+        status = body.status;
+        response = body.response;
+        console.info(
+          `[run-txn-func] status: ${status}, txnHash: ${response["transactionHash"]}`
+        );
+      } catch (error) {
+        let err;
+        if (error.response) {
+          // Request made and server responded
+          err = `data:${JSON.stringify(error.response.data)}, status:${
+            error.response.status
+          }`;
+        } else if (error.request) {
+          // The request was made but no response was received
+          err = `error.request: ${error.request}`;
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          err = `error.message: ${error.message}`;
+        }
+        console.error("[run-txn-func]", err);
+        apm.captureError(error, {
+          custom: { lambdaReqBody: JSON.stringify(lambdaReqBody) },
+        });
+      }
+
+      if (!status) {
+        console.error(
+          `[postEventProcess][run-txn-func] Transaction failed`,
+          JSON.stringify(response)
+        );
+        continue;
+      }
+
+      // await directMintTxFnc(
+      //   adminArr,
+      //   chain === "main" ? 137 : 80001,
+      //   routerAddr[chain],
+      //   contractAddress,
+      //   arrayInfo.memberTokenIdArr,
+      //   arrayInfo.badgeTypeArr,
+      //   arrayInfo.dataArr,
+      //   arrayInfo.tokenUriArr,
+      //   funcApi[chain].key,
+      //   funcApi[chain].id,
+      //   keyCreds[ADMIN_PRIVATE_KEY_NAME],
+      //   rpcUrl[chain],
+      //   reqBody,
+      //   postDirectMint
+      // );
 
       const reqBody = {
         dao_uuid: dao.uuid,
@@ -436,28 +536,20 @@ const postEventProcess = async (eventId) => {
           : null,
       };
 
-      await directMintTxFnc(
-        adminArr,
-        chain === "main" ? 137 : 80001,
-        routerAddr[chain],
-        contractAddress,
-        arrayInfo.memberTokenIdArr,
-        arrayInfo.badgeTypeArr,
-        arrayInfo.dataArr,
-        arrayInfo.tokenUriArr,
-        funcApi[chain].key,
-        funcApi[chain].id,
-        keyCreds[ADMIN_PRIVATE_KEY_NAME],
-        rpcUrl[chain],
-        reqBody,
-        postDirectMint
-      );
+      const badge = await postDirectMint(reqBody);
+      if (!badge) {
+        console.error(
+          `[postEventProcess][directMint] Could not create badge using directMint in the backend`
+        );
+        continue;
+      }
 
-      await new Promise((r) => setTimeout(r, 5000));
+      userProcessed.push(...userBatch);
+      console.info("badge", badge);
     }
   }
 
-  return voucherCreationInfo;
+  return userProcessed;
 };
 
 module.exports = {
