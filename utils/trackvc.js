@@ -35,7 +35,9 @@ const getTrackableChannels = async (guild) => {
     const channels = await guild.channels.fetch();
     vcs = channels.filter(
       (channel) =>
-        channel.type === "GUILD_VOICE" && !activeChannels.includes(channel.id)
+        channel &&
+        channel.type === "GUILD_VOICE" &&
+        !activeChannels.includes(channel.id)
     );
   } catch (err) {
     console.error(err);
