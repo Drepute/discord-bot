@@ -262,7 +262,15 @@ client.on("interactionCreate", async (interaction) => {
           footer.split("|")[1].split(":")[1].split("%")[0]
         );
 
-        const channel = await guild.channels.fetch([channelId]);
+        const allChannels = await guild.channels.fetch();
+        const channel = allChannels.find((ch) => ch.id === channelId);
+
+        if (!channel) {
+          interaction.reply({
+            content: "Channel not found!",
+            ephemeral: true,
+          });
+        }
         const channelName = channel.name;
 
         let options = [];
@@ -372,6 +380,16 @@ client.on("interactionCreate", async (interaction) => {
 
         await interaction.deferUpdate();
 
+        const allChannels = await guild.channels.fetch();
+        const vcChannel = allChannels.find((ch) => ch.id === channelId);
+        if (!vcChannel) {
+          await interaction.editReply({
+            content: "Could not find the voice channel! Try again later.",
+            ephemeral: true,
+          });
+          return;
+        }
+
         const dao = await getDao(guildId);
         const daoDiscord = dao.discord;
         const directMint = daoDiscord.direct_mint;
@@ -392,7 +410,6 @@ client.on("interactionCreate", async (interaction) => {
         );
         console.log(`New Event Created:\n${JSON.stringify(event, null, 2)}`);
 
-        const vcChannel = await guild.channels.fetch([channelId]);
         const commandChannel = await guild.channels.fetch([
           interaction.channelId,
         ]);
