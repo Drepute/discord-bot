@@ -263,7 +263,9 @@ client.on("interactionCreate", async (interaction) => {
         );
 
         const allChannels = await guild.channels.fetch();
-        const channel = allChannels.find((ch) => ch.id === channelId);
+        const channel = allChannels.filter(
+          (ch) => ch && ch.id === channelId
+        )[0];
 
         if (!channel) {
           interaction.reply({
@@ -381,7 +383,7 @@ client.on("interactionCreate", async (interaction) => {
         await interaction.deferUpdate();
 
         const allChannels = await guild.channels.fetch();
-        const vcChannel = allChannels.find((ch) => ch.id === channelId);
+        const vcChannel = allChannels.filter((ch) => ch && ch.id === channelId);
         if (!vcChannel) {
           await interaction.editReply({
             content: "Could not find the voice channel! Try again later.",
