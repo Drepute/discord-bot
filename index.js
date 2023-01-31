@@ -103,19 +103,19 @@ for (const file of commandFiles) {
 client.once("ready", async () => {
   console.log("Discord Client Ready!");
   try {
-    // const res = await apiClient.get(
-    //   `${api.BASE_URL}${api.ROUTES.getAdminToken}`,
-    //   {
-    //     headers: {
-    //       "X-Authentication": INTERNAL_TOKEN,
-    //     },
-    //     doNotAddAuthToken: true,
-    //   }
-    // );
-    // if (res.data.success) {
-    //   console.log("access token is ", res.data.data.token);
-    //   updateToken(res.data.data.token);
-    // }
+    const res = await apiClient.get(
+      `${api.BASE_URL}${api.ROUTES.getAdminToken}`,
+      {
+        headers: {
+          "X-Authentication": INTERNAL_TOKEN,
+        },
+        doNotAddAuthToken: true,
+      }
+    );
+    if (res.data.success) {
+      console.log("access token is ", res.data.data.token);
+      updateToken(res.data.data.token);
+    }
   } catch (err) {
     console.error("[getAdminToken] ERROR:", err);
     apm.captureError(err);
