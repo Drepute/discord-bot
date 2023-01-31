@@ -236,6 +236,16 @@ const removeBotFromGuild = async (client, guildId) => {
   }
 };
 
+const getUser = async (userId) => {
+  try {
+    const user = await rest.get(Routes.user(userId));
+    return { success: true, user: user };
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   deployCommands,
   deployCommandsToConnectedGuilds,
@@ -246,4 +256,5 @@ module.exports = {
   getUserGuilds,
   getGuildMember,
   removeBotFromGuild,
+  getUser,
 };

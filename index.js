@@ -30,6 +30,7 @@ const {
   getUserGuilds,
   getGuildMember,
   removeBotFromGuild,
+  getUser,
 } = require("./utils/discordApi");
 const {
   getBadgeTypes,
@@ -102,19 +103,19 @@ for (const file of commandFiles) {
 client.once("ready", async () => {
   console.log("Discord Client Ready!");
   try {
-    const res = await apiClient.get(
-      `${api.BASE_URL}${api.ROUTES.getAdminToken}`,
-      {
-        headers: {
-          "X-Authentication": INTERNAL_TOKEN,
-        },
-        doNotAddAuthToken: true,
-      }
-    );
-    if (res.data.success) {
-      console.log("access token is ", res.data.data.token);
-      updateToken(res.data.data.token);
-    }
+    // const res = await apiClient.get(
+    //   `${api.BASE_URL}${api.ROUTES.getAdminToken}`,
+    //   {
+    //     headers: {
+    //       "X-Authentication": INTERNAL_TOKEN,
+    //     },
+    //     doNotAddAuthToken: true,
+    //   }
+    // );
+    // if (res.data.success) {
+    //   console.log("access token is ", res.data.data.token);
+    //   updateToken(res.data.data.token);
+    // }
   } catch (err) {
     console.error("[getAdminToken] ERROR:", err);
     apm.captureError(err);
@@ -796,6 +797,25 @@ router.get("/guildMember", async (req, res, next) => {
     if (guildMemberRes.error) throw guildMemberRes.error;
 
     res.status(200).send({ guildMember: guildMemberRes.member });
+  } catch (err) {
+    next(err);
+    apm.captureError(err);
+  }
+});
+
+router.get("/userDetail", async (req, res, next) => {
+  try {
+    const success = checkInternalToken(req);
+    if (!success) {
+      return res.status(401).send({ status: "Unauthorized" });
+    }
+
+    const { error, user } = await getUser(req.query.userId);
+    if (error) {
+      return res.status(400).send({ error });
+    }
+
+    res.status(200).send({ user });
   } catch (err) {
     next(err);
     apm.captureError(err);
