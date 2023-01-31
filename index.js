@@ -275,11 +275,6 @@ client.on("interactionCreate", async (interaction) => {
 
         const channelName = channel.name;
 
-        return await interaction.reply({
-          content: `Voice channel tracking started for ${channelName}!`,
-          ephemeral: true,
-        });
-
         let options = [];
         try {
           const dao = await getDao(guildId);
