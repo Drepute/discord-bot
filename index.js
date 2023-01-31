@@ -262,18 +262,23 @@ client.on("interactionCreate", async (interaction) => {
           footer.split("|")[1].split(":")[1].split("%")[0]
         );
 
-        const allChannels = await guild.channels.fetch();
-        const channel = allChannels.filter(
-          (ch) => ch && ch.id === channelId
-        )[0];
+        console.log(guildId, channelId);
 
+        const allChannels = await guild.channels.fetch();
+        const channel = allChannels.find((ch) => ch?.id === channelId);
         if (!channel) {
-          interaction.reply({
+          return await interaction.reply({
             content: "Channel not found!",
             ephemeral: true,
           });
         }
+
         const channelName = channel.name;
+
+        return await interaction.reply({
+          content: `Voice channel tracking started for ${channelName}!`,
+          ephemeral: true,
+        });
 
         let options = [];
         try {
@@ -383,13 +388,12 @@ client.on("interactionCreate", async (interaction) => {
         await interaction.deferUpdate();
 
         const allChannels = await guild.channels.fetch();
-        const vcChannel = allChannels.filter((ch) => ch && ch.id === channelId);
+        const vcChannel = allChannels.find((ch) => ch?.id === channelId);
         if (!vcChannel) {
-          await interaction.editReply({
+          return await interaction.editReply({
             content: "Could not find the voice channel! Try again later.",
             ephemeral: true,
           });
-          return;
         }
 
         const dao = await getDao(guildId);
