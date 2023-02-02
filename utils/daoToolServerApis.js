@@ -256,7 +256,13 @@ const removeBotFromBackend = async (reqBody) => {
       err = `error.message: ${error.message}`;
     }
     console.error(err);
-    apm.captureError(error, { custom: { reqBody: JSON.stringify(reqBody) } });
+    if (
+      (error.response && error.response.status !== 404) ||
+      error.request ||
+      error.message
+    ) {
+      apm.captureError(error, { custom: { reqBody: JSON.stringify(reqBody) } });
+    }
   }
 
   return data;
