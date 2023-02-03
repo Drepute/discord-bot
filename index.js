@@ -728,9 +728,15 @@ router.post("/removeBot", async (req, res, next) => {
 
 router.get("/guildRoles/:guildId", async (req, res, next) => {
   try {
+    const success = checkInternalToken(req);
+    if (!success) {
+      res.status(401).send({ status: "Unauthorized" });
+      return;
+    }
+
     const { roles, error } = await getGuildRoles(req.params.guildId);
     if (error) throw error;
-    res.status(200).send({ data: roles });
+    res.status(200).send({ roles });
   } catch (err) {
     next(err);
     apm.captureError(err);
