@@ -862,7 +862,7 @@ router.get("/userDetail", async (req, res, next) => {
       return res.status(401).send({ status: "Unauthorized" });
     }
 
-    const { error, user } = await getDiscordUserFromId(req.query.userId);
+    const { error, user } = await getDiscordUserFromId(req.query.user_id);
     if (error) {
       return res.status(400).send({ error });
     }
