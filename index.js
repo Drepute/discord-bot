@@ -22,21 +22,29 @@ const express = require("express");
 const apiClient = require("./utils/apiClient");
 const { updateToken } = require("./utils/token");
 const api = require("./constants/api");
+
 const {
   deployCommands,
   clearCommandsInGuild,
   getGuildRoles,
   getAccessToken,
+  refreshAccessToken,
   getUserGuilds,
   getGuildMember,
   removeBotFromGuild,
+  addUserToDb,
+  getUserFromDb,
+  getDiscordUserFromId,
+  getDiscordUserFromToken,
 } = require("./utils/discordApi");
+
 const {
   getBadgeTypes,
   getDao,
   getAllDiscords,
   removeBotFromBackend,
 } = require("./utils/daoToolServerApis.js");
+
 const {
   createEvent,
   endEvent,
@@ -721,9 +729,64 @@ router.post("/removeBot", async (req, res, next) => {
 
 router.get("/guildRoles/:guildId", async (req, res, next) => {
   try {
+    const success = checkInternalToken(req);
+    if (!success) {
+      res.status(401).send({ status: "Unauthorized" });
+      return;
+    }
+
     const { roles, error } = await getGuildRoles(req.params.guildId);
     if (error) throw error;
-    res.status(200).send({ data: roles });
+    res.status(200).send({ roles });
+  } catch (err) {
+    next(err);
+    apm.captureError(err);
+  }
+});
+
+router.post("/addUser", async (req, res, next) => {
+  try {
+    const success = checkInternalToken(req);
+    if (!success) {
+      res.status(401).send({ status: "Unauthorized" });
+      return;
+    }
+
+    const { discord_code, redirect_uri, guilds } = req.body;
+    if (discord_code == undefined || redirect_uri == undefined) {
+      return res
+        .status(400)
+        .send({ message: "discord_code or redirect_uri not provided!" });
+    }
+
+    const tokenRes = await getAccessToken(discord_code, redirect_uri);
+    if (tokenRes.error) {
+      return res.status(400).send({ message: tokenRes.error.message });
+    }
+
+    const userRes = await getDiscordUserFromToken(tokenRes.data.access_token);
+    if (userRes.error) {
+      return res.status(400).send({ message: userRes.error.message });
+    }
+
+    const user = await addUserToDb(
+      userRes.data.id,
+      tokenRes.data.access_token,
+      tokenRes.data.refresh_token
+    );
+
+    let userGuildsRes;
+    if (guilds) {
+      userGuildsRes = await getUserGuilds(user.accessToken);
+      if (userGuildsRes.error) {
+        return res.status(400).send({ message: userGuildsRes.error.message });
+      }
+    }
+
+    res.status(200).send({
+      user: { id: user.userId },
+      ...(guilds && userGuildsRes.guilds && { guilds: userGuildsRes.guilds }),
+    });
   } catch (err) {
     next(err);
     apm.captureError(err);
@@ -732,49 +795,39 @@ router.get("/guildRoles/:guildId", async (req, res, next) => {
 
 router.get("/userGuilds", async (req, res, next) => {
   try {
-    const { discord_code, redirect_uri } = req.query;
-    if (discord_code == undefined || redirect_uri == undefined) {
-      return res.status(400).send();
-    }
-    const tokenRes = await getAccessToken(discord_code, redirect_uri);
-    if (tokenRes.error) throw tokenRes.error;
-
-    console.info("[/userGuilds] TOKEN_OBJECT:", tokenRes.token);
-
-    const discordsRes = await getAllDiscords();
-    if (discordsRes.error) throw discordsRes.error;
-
-    const guildIds = discordsRes.data.map((item) => item.guild_id);
-    const userGuildsRes = await getUserGuilds(tokenRes.token, guildIds);
-    if (userGuildsRes.error) throw userGuildsRes.error;
-
-    res
-      .status(200)
-      .send({ data: { guilds: userGuildsRes.guilds, user: tokenRes.user } });
-  } catch (err) {
-    next(err);
-    apm.captureError(err);
-  }
-});
-
-router.get("/user", async (req, res, next) => {
-  try {
-    success = checkInternalToken(req);
+    const success = checkInternalToken(req);
     if (!success) {
       res.status(401).send({ status: "Unauthorized" });
       return;
     }
-    const { discord_code, redirect_uri } = req.query;
-    if (discord_code == undefined || redirect_uri == undefined) {
-      return res.status(400).send();
-    }
-    const tokenRes = await getAccessToken(discord_code, redirect_uri);
-    if (tokenRes.error) throw tokenRes.error;
-    console.info("[/user] TOKEN_OBJECT:", tokenRes.token);
 
-    res
-      .status(200)
-      .send({ data: { token: tokenRes.token, user: tokenRes.user } });
+    const { user_id } = req.query;
+    if (user_id == undefined) {
+      return res.status(400).send({ message: "user_id not provided!" });
+    }
+
+    const user = await getUserFromDb(user_id);
+    if (!user) {
+      return res.status(404).send({ message: "User not found!" });
+    }
+
+    let userGuildsRes = await getUserGuilds(user.accessToken);
+    if (userGuildsRes.error && userGuildsRes.status == 401) {
+      const refreshRes = await refreshAccessToken(user.refreshToken);
+      if (refreshRes.error) {
+        return res.status(400).send({ message: refreshRes.error.message });
+      }
+
+      user.accessToken = refreshRes.data.access_token;
+      user.refreshToken = refreshRes.data.refresh_token;
+      await user.save();
+
+      userGuildsRes = await getUserGuilds(user.accessToken);
+    }
+
+    userGuildsRes.guilds
+      ? res.status(200).send({ guilds: userGuildsRes.guilds })
+      : res.status(400).send({ message: userGuildsRes.error.message });
   } catch (err) {
     next(err);
     apm.captureError(err);
@@ -783,7 +836,7 @@ router.get("/user", async (req, res, next) => {
 
 router.get("/guildMember", async (req, res, next) => {
   try {
-    success = checkInternalToken(req);
+    const success = checkInternalToken(req);
     if (!success) {
       res.status(401).send({ status: "Unauthorized" });
       return;
@@ -797,6 +850,25 @@ router.get("/guildMember", async (req, res, next) => {
     if (guildMemberRes.error) throw guildMemberRes.error;
 
     res.status(200).send({ guildMember: guildMemberRes.member });
+  } catch (err) {
+    next(err);
+    apm.captureError(err);
+  }
+});
+
+router.get("/userDetail", async (req, res, next) => {
+  try {
+    const success = checkInternalToken(req);
+    if (!success) {
+      return res.status(401).send({ status: "Unauthorized" });
+    }
+
+    const { error, user } = await getDiscordUserFromId(req.query.user_id);
+    if (error) {
+      return res.status(400).send({ error });
+    }
+
+    res.status(200).send({ user });
   } catch (err) {
     next(err);
     apm.captureError(err);

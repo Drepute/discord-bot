@@ -8,6 +8,8 @@ const path = require("path");
 const { convertPerms } = require("./discordPermission");
 const api = require("../constants/api");
 
+const db = require("../db");
+
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
@@ -15,6 +17,68 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const IGNORE_CMDS = ["addContribution", "register", "verify"];
 
 const rest = new REST({ version: "9" }).setToken(DISCORD_TOKEN);
+
+const addUserToDb = async (userId, accessToken, refreshToken) => {
+  // add or update user using sequelize model
+  let user = await getUserFromDb(userId);
+  if (user) {
+    user.accessToken = accessToken;
+    user.refreshToken = refreshToken;
+    await user.save();
+  } else {
+    user = await db.User.create({ userId, accessToken, refreshToken });
+  }
+  return user;
+};
+
+const getUserFromDb = async (userId) => {
+  return await db.User.findOne({ where: { userId: userId } });
+};
+
+const getDiscordUserFromId = async (userId) => {
+  try {
+    const user = await rest.get(Routes.user(userId));
+    return { success: true, user: user };
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: error.message };
+  }
+};
+
+const refreshAccessToken = async (refreshToken) => {
+  const response = { data: null, error: null };
+
+  const params = new URLSearchParams();
+  params.append("client_id", CLIENT_ID);
+  params.append("client_secret", CLIENT_SECRET);
+  params.append("grant_type", "refresh_token");
+  params.append("refresh_token", refreshToken);
+
+  try {
+    const url = "https://discord.com/api/oauth2/token";
+    const res = await axios.post(url, params);
+    response["data"] = res.data;
+  } catch (error) {
+    let err;
+    if (error.response) {
+      // Request made and server responded
+      err = `data:${JSON.stringify(error.response.data)}, status:${
+        error.response.status
+      }`;
+    } else if (error.request) {
+      // The request was made but no response was received
+      err = `error.request: ${error.request}`;
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      err = `error.message: ${error.message}`;
+    }
+    console.error(err);
+    response["error"] = new Error(err);
+    return response;
+  }
+
+  return response;
+};
 
 const deployCommands = async (GUILD_ID) => {
   const commands = [];
@@ -98,8 +162,8 @@ const getAccessToken = async (
   discord_code,
   redirect_uri = api.DISCORD_REDIRECT_URI
 ) => {
-  const response = { token: null, user: null, error: null };
-  // const headers = { "Content-Type": "application/x-www-form-urlencoded" };
+  const response = { data: null, error: null };
+
   const params = new URLSearchParams();
   params.append("client_id", CLIENT_ID);
   params.append("client_secret", CLIENT_SECRET);
@@ -112,7 +176,7 @@ const getAccessToken = async (
     const url = "https://discord.com/api/oauth2/token";
     const res = await axios.post(url, params);
     // console.log("[getAccessToken]", res);
-    response["token"] = res.data.access_token;
+    response["data"] = res.data;
   } catch (error) {
     let err;
     if (error.response) {
@@ -132,11 +196,20 @@ const getAccessToken = async (
     return response;
   }
 
+  return response;
+};
+
+const getDiscordUserFromToken = async (accessToken) => {
+  const response = { data: null, error: null };
   try {
-    const headers = { Authorization: `Bearer ${response.token}` };
     const url = "https://discord.com/api/users/@me";
-    const res = await axios.get(url, { headers: headers });
-    response["user"] = res.data;
+    const res = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    // console.log("[getDiscordUserFromToken]", res.data);
+    response["data"] = res.data;
   } catch (error) {
     let err;
     if (error.response) {
@@ -153,13 +226,14 @@ const getAccessToken = async (
     }
     console.error(err);
     response["error"] = new Error(err);
+    return response;
   }
 
   return response;
 };
 
-const getUserGuilds = async (accessToken, guildIds) => {
-  const response = { guilds: null, error: null };
+const getUserGuilds = async (accessToken) => {
+  const response = { guilds: null, error: null, status: null };
   const headers = { Authorization: `Bearer ${accessToken}` };
   const IMAGE_BASE_URL = "https://cdn.discordapp.com";
   try {
@@ -172,9 +246,7 @@ const getUserGuilds = async (accessToken, guildIds) => {
 
     const guilds = guildRes.data
       .filter(
-        (item) =>
-          (item.owner || convertPerms(item.permissions).ADMINISTRATOR) &&
-          guildIds.indexOf(item.id) < 0
+        (item) => item.owner || convertPerms(item.permissions).ADMINISTRATOR
       )
       .map((item) =>
         item.icon
@@ -186,9 +258,25 @@ const getUserGuilds = async (accessToken, guildIds) => {
       );
     // console.info("[/getUserGuilds] Guilds", guilds);
     response["guilds"] = guilds;
-  } catch (err) {
+    response["status"] = guildRes.status;
+  } catch (error) {
+    let err;
+    if (error.response) {
+      // Request made and server responded
+      err = `data:${JSON.stringify(error.response.data)}, status:${
+        error.response.status
+      }`;
+      response["status"] = error.response.status;
+    } else if (error.request) {
+      // The request was made but no response was received
+      err = `error.request: ${error.request}`;
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      err = `error.message: ${error.message}`;
+    }
     console.error(err);
-    response["error"] = err;
+    response["error"] = new Error(err);
+    return response;
   }
 
   return response;
@@ -243,7 +331,12 @@ module.exports = {
   clearCommandsInGuild,
   getGuildRoles,
   getAccessToken,
+  refreshAccessToken,
   getUserGuilds,
   getGuildMember,
   removeBotFromGuild,
+  getDiscordUserFromId,
+  getUserFromDb,
+  getDiscordUserFromToken,
+  addUserToDb,
 };
