@@ -480,9 +480,12 @@ client.on("interactionCreate", async (interaction) => {
         // });
 
         // schedule post event logic
+        const eventId = event.id;
         let date = new Date();
         date.setMinutes(date.getMinutes() + duration);
         const job = schedule.scheduleJob(date, async function () {
+          const event = await getEvent(eventId);
+          console.log("job_event_active", event.active);
           if (event.active) {
             await addParticipantEndTime(event.id, new Date());
             await endEvent(event.id);
