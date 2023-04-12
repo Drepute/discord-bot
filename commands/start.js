@@ -1,24 +1,13 @@
-const { SlashCommandBuilder } = require("@discordjs/builders");
 const {
-  Permissions,
-  MessageActionRow,
-  MessageSelectMenu,
-  MessageEmbed,
-  // Intents,
-  // Client,
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
+  EmbedBuilder,
 } = require("discord.js");
+
 const { getDao } = require("../utils/daoToolServerApis.js");
 const { getTrackableChannels } = require("../utils/trackvc");
-// const client = require("../index");
-
-// const client = new Client({
-//   intents: [
-//     Intents.FLAGS.GUILDS,
-//     Intents.FLAGS.GUILD_MESSAGES,
-//     Intents.FLAGS.DIRECT_MESSAGES,
-//     // Intents.FLAGS.GUILD_SCHEDULED_EVENTS,
-//   ],
-// });
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -76,7 +65,7 @@ module.exports = {
       }
       console.log("allow", allow);
       if (
-        !interaction.member.permissions.has(Permissions.FLAGS.ADMINISTRATOR) &&
+        !interaction.member.permissions.has(PermissionFlagsBits.Administrator) &&
         !allow
       ) {
         return interaction.reply({
@@ -123,14 +112,14 @@ module.exports = {
       options = options.slice(0, 25);
 
       try {
-        const selectRow = new MessageActionRow().addComponents(
-          new MessageSelectMenu()
+        const selectRow = new ActionRowBuilder().addComponents(
+          new StringSelectMenuBuilder()
             .setCustomId("voice-select")
             .setPlaceholder("Nothing selected")
             .setOptions(options)
         );
 
-        const embed = new MessageEmbed()
+        const embed = new EmbedBuilder()
           .setColor("#0099ff")
           .setTitle(`${eventTitle}`)
           .setImage(

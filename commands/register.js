@@ -1,5 +1,4 @@
-const { SlashCommandBuilder } = require("@discordjs/builders");
-const { Permissions } = require("discord.js");
+const { SlashCommandBuilder, Permissions } = require("discord.js");
 const api = require("../constants/api");
 const axios = require("axios");
 const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN;

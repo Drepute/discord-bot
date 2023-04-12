@@ -1,12 +1,12 @@
-const { SlashCommandBuilder } = require("@discordjs/builders");
 const {
-  Permissions,
-  MessageActionRow,
-  MessageSelectMenu,
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
 } = require("discord.js");
+
 const { getDao } = require("../utils/daoToolServerApis.js");
 const { getAllInactiveEvents } = require("../utils/trackvc");
-// const client = require("../index");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -38,7 +38,7 @@ module.exports = {
         }
       }
       if (
-        !interaction.member.permissions.has(Permissions.FLAGS.ADMINISTRATOR) &&
+        !interaction.member.permissions.has(PermissionFlagsBits.Administrator) &&
         !allow
       ) {
         return interaction.reply({
@@ -75,8 +75,8 @@ module.exports = {
       }
 
       try {
-        const row = new MessageActionRow().addComponents(
-          new MessageSelectMenu()
+        const row = new ActionRowBuilder().addComponents(
+          new StringSelectMenuBuilder()
             .setCustomId("event-info-select")
             .setPlaceholder("Nothing selected")
             .addOptions(options)

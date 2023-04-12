@@ -10,11 +10,12 @@ const fs = require("node:fs");
 const {
   Client,
   Collection,
-  Intents,
-  MessageEmbed,
-  MessageActionRow,
-  MessageSelectMenu,
+  GatewayIntentBits,
+  EmbedBuilder,
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
 } = require("discord.js");
+
 
 const cors = require("cors");
 const express = require("express");
@@ -41,7 +42,6 @@ const {
 const {
   getBadgeTypes,
   getDao,
-  getAllDiscords,
   removeBotFromBackend,
 } = require("./utils/daoToolServerApis.js");
 
@@ -88,11 +88,10 @@ db.sequelize.sync({
 
 const client = new Client({
   intents: [
-    Intents.FLAGS.GUILDS,
-    Intents.FLAGS.GUILD_MESSAGES,
-    Intents.FLAGS.DIRECT_MESSAGES,
-    Intents.FLAGS.GUILD_VOICE_STATES,
-    // Intents.FLAGS.GUILD_SCHEDULED_EVENTS,
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.GuildVoiceStates,
   ],
 });
 
@@ -324,14 +323,14 @@ client.on("interactionCreate", async (interaction) => {
           });
         }
 
-        const selectRow = new MessageActionRow().addComponents(
-          new MessageSelectMenu()
+        const selectRow = new ActionRowBuilder().addComponents(
+          new StringSelectMenuBuilder()
             .setCustomId("badge-select")
             .setPlaceholder("Select a badge")
             .setOptions(options)
         );
 
-        const embed = new MessageEmbed()
+        const embed = new EmbedBuilder()
           .setColor("#0099ff")
           .setTitle(`${title}`)
           .setImage(
@@ -433,7 +432,7 @@ client.on("interactionCreate", async (interaction) => {
         });
         await addMultipleParticipants(event, participantsDetailList);
 
-        const embed = new MessageEmbed()
+        const embed = new EmbedBuilder()
           .setColor("#0099ff")
           .setTitle(`${title}`)
           .setImage(
@@ -582,7 +581,7 @@ client.on("interactionCreate", async (interaction) => {
           components: [],
         });
 
-        const embed = new MessageEmbed()
+        const embed = new EmbedBuilder()
           .setColor("#0099ff")
           .setTitle(info.eventTitle)
           .setDescription(
@@ -888,11 +887,11 @@ router.get("/discordRedirect", async (req, res, next) => {
   }
 });
 
-router.get("/ping", (req, res) => {
+router.get("/ping", (_req, res) => {
   res.status(200).send({ status: "success" });
 });
 
-app.use(function (err, req, res, next) {
+app.use(function (err, _req, res, next) {
   res.json({ error: err.message ? err.message : err });
 });
 

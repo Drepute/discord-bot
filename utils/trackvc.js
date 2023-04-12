@@ -6,6 +6,7 @@ const lambda = new AWS.Lambda({ region: "us-east-1" });
 const axios = require("axios");
 const { Op, QueryTypes } = require("sequelize");
 const { ethers } = require("ethers");
+const { ChannelType } = require("discord.js")
 
 const { directMintTxFnc } = require("./gassLessTnx/index");
 const {
@@ -36,7 +37,7 @@ const getTrackableChannels = async (guild) => {
     vcs = channels.filter(
       (channel) =>
         channel &&
-        channel.type === "GUILD_VOICE" &&
+        channel.type === ChannelType.GuildVoice &&
         !activeChannels.includes(channel.id)
     );
   } catch (err) {
