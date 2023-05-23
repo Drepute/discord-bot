@@ -300,7 +300,12 @@ const getGuildMember = async (GUILD_ID, USER_ID) => {
   const response = { member: null, error: null };
   try {
     const res = await rest.get(Routes.guildMember(GUILD_ID, USER_ID));
-    // console.log("[getGuildRoles] res:", JSON.stringify(res));
+    const guildRoles = await rest.get(Routes.guildRoles(GUILD_ID));
+    const everyoneRole = guildRoles.find((role) => role.name === "@everyone");
+    const everyoneRoleId = everyoneRole ? everyoneRole.id : null;
+    if (everyoneRoleId) {
+      res.roles.unshift(everyoneRoleId);
+    }
     response.member = res;
   } catch (error) {
     console.error("[getGuildMember]", error);
