@@ -38,7 +38,9 @@ module.exports = {
         }
       }
       if (
-        !interaction.member.permissions.has(PermissionFlagsBits.Administrator) &&
+        !interaction.member.permissions.has(
+          PermissionFlagsBits.Administrator
+        ) &&
         !allow
       ) {
         return interaction.reply({
@@ -54,7 +56,7 @@ module.exports = {
       let options = [];
       try {
         const events = await getAllInactiveEvents(guildId, "DESC", 25);
-        console.log("events", events);
+        console.log("total_events", events?.length);
         options = events.map((event) => {
           return {
             label: `[${event.channelName}] ${event.title}`,

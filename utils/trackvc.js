@@ -5,10 +5,8 @@ const lambda = new AWS.Lambda({ region: "us-east-1" });
 
 const axios = require("axios");
 const { Op, QueryTypes } = require("sequelize");
-const { ethers } = require("ethers");
-const { ChannelType } = require("discord.js")
+const { ChannelType } = require("discord.js");
 
-const { directMintTxFnc } = require("./gassLessTnx/index");
 const {
   getBadgeVoucherCreationInfo,
   createBadgeVoucher,
@@ -18,9 +16,7 @@ const { getSecretValue } = require("../secret");
 const db = require("../db");
 const api = require("../constants/api");
 
-const { apm } = require("../index");
-
-const ADMIN_PRIVATE_KEY_NAME = "ADMIN_PRIVATE_KEY";
+const apm = require("../apm");
 
 const getTrackableChannels = async (guild) => {
   // list of event with channelId with active event
@@ -134,10 +130,6 @@ const addMultipleParticipants = async (event, participantsDetailList) => {
 
 const getParticipant = async (sessionId, userId, eventId) => {
   let participant;
-  // participant = await db.Participant.findOne({
-  //   where: { sessionId: sessionId },
-  // });
-
   // no user with given sessionId
   if (!participant) {
     participant = await db.Participant.findOne({
@@ -400,30 +392,7 @@ const postEventProcess = async (eventId) => {
       console.info("badgeVoucher", badgeVoucher);
     } else {
       const chain = voucherCreationInfo.chain;
-      // const keyCreds = await getSecretValue("wallet-keys");
-      // const biconomyCreds = await getSecretValue("biconomy");
-      // const rpcCreds = await getSecretValue("rpc_urls");
-      // const wallet = new ethers.Wallet(keyCreds[ADMIN_PRIVATE_KEY_NAME]);
       const contractAddress = dao.contract_address;
-      // const adminArr = wallet.address;
-      // const funcApi = {
-      //   test: {
-      //     id: biconomyCreds["TEST_ID"],
-      //     key: biconomyCreds["TEST_KEY"],
-      //   },
-      //   main: {
-      //     id: biconomyCreds["MAIN_ID"],
-      //     key: biconomyCreds["MAIN_KEY"],
-      //   },
-      // };
-      // const rpcUrl = {
-      //   test: rpcCreds["ALCHEMY_POLYGON_MUMBAI"],
-      //   main: rpcCreds["ALCHEMY_POLYGON_MAIN"],
-      // };
-      // const routerAddr = {
-      //   main: "0xB9Acf5287881160e8CE66b53b507F6350d7a7b1B",
-      //   test: "0x1C6D20042bfc8474051Aba9FB4Ff85880089A669",
-      // };
 
       const arrayInfo = {
         memberTokenIdArr: [],
@@ -508,23 +477,6 @@ const postEventProcess = async (eventId) => {
         );
         continue;
       }
-
-      // await directMintTxFnc(
-      //   adminArr,
-      //   chain === "main" ? 137 : 80001,
-      //   routerAddr[chain],
-      //   contractAddress,
-      //   arrayInfo.memberTokenIdArr,
-      //   arrayInfo.badgeTypeArr,
-      //   arrayInfo.dataArr,
-      //   arrayInfo.tokenUriArr,
-      //   funcApi[chain].key,
-      //   funcApi[chain].id,
-      //   keyCreds[ADMIN_PRIVATE_KEY_NAME],
-      //   rpcUrl[chain],
-      //   reqBody,
-      //   postDirectMint
-      // );
 
       const reqBody = {
         dao_uuid: dao.uuid,

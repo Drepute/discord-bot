@@ -1,10 +1,7 @@
 const { eventListener } = require("./eventListener");
 const ethers = require("ethers");
 const { managerAbi } = require("./abi/manager");
-const {
-  ALCHEMY_MATIC_MAINNET,
-  POLYGON_API_KEY,
-} = require("../../constants/api");
+const { POLYGON_API_KEY } = require("../../constants/api");
 var axios = require("axios");
 var qs = require("qs");
 const { getSecretValue } = require("../../secret");
