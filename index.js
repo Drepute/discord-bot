@@ -5,7 +5,10 @@ const express = require("express");
 
 const apm = require("./apm");
 const client = require("./discordClient");
+
+// routes
 const mainRoute = require("./routes/main");
+const adapterRoute = require("./routes/adapter");
 
 const db = require("./db");
 const { proxyContractVerifier } = require("./utils/events/verifierCall");
@@ -25,6 +28,7 @@ db.sequelize.sync({
 
 app.use(cors({ origin: "*" }));
 app.use(BASE_PATH, mainRoute);
+app.use(`${BASE_PATH}/adapter`, adapterRoute);
 
 app.use(function (err, _req, res, _next) {
   res.json({ error: err.message ? err.message : err });

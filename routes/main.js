@@ -3,7 +3,7 @@ const express = require("express");
 const apm = require("../apm");
 const client = require("../discordClient");
 
-const { checkInternalToken } = require("../utils/auth");
+const { authMiddleware } = require("../middlewares/auth");
 
 const {
   deployCommands,
@@ -26,14 +26,8 @@ router.get("/ping", (_req, res) => {
   res.status(200).send({ status: "success" });
 });
 
-router.post("/toggleBot", async (req, res, next) => {
+router.post("/toggleBot", authMiddleware, async (req, res, next) => {
   try {
-    const success = checkInternalToken(req);
-    if (!success) {
-      res.status(401).send({ status: "Unauthorized" });
-      return;
-    }
-
     const guildId = req.body.guild_id;
     // const commands = req.body.commands;
     const disableBot = req.body.disable_bot;
@@ -56,13 +50,8 @@ router.post("/toggleBot", async (req, res, next) => {
   }
 });
 
-router.get("/details/:guild_id", async (req, res, next) => {
+router.get("/details/:guild_id", authMiddleware, async (req, res, next) => {
   try {
-    const success = checkInternalToken(req);
-    if (!success) {
-      res.status(401).send({ status: "Unauthorized" });
-      return;
-    }
     const guildId = req.params.guild_id;
     try {
       const guild = await client.guilds.fetch(guildId);
@@ -86,13 +75,8 @@ router.get("/details/:guild_id", async (req, res, next) => {
   }
 });
 
-router.post("/removeBot", async (req, res, next) => {
+router.post("/removeBot", authMiddleware, async (req, res, next) => {
   try {
-    const success = checkInternalToken(req);
-    if (!success) {
-      res.status(401).send({ status: "Unauthorized" });
-      return;
-    }
     const guildId = req.body.guild_id;
     const response = await removeBotFromGuild(client, guildId);
     res.json(response);
@@ -102,14 +86,8 @@ router.post("/removeBot", async (req, res, next) => {
   }
 });
 
-router.get("/guildRoles/:guildId", async (req, res, next) => {
+router.get("/guildRoles/:guildId", authMiddleware, async (req, res, next) => {
   try {
-    const success = checkInternalToken(req);
-    if (!success) {
-      res.status(401).send({ status: "Unauthorized" });
-      return;
-    }
-
     const { roles, error } = await getGuildRoles(req.params.guildId);
     if (error) throw error;
     res.status(200).send({ roles });
@@ -119,14 +97,8 @@ router.get("/guildRoles/:guildId", async (req, res, next) => {
   }
 });
 
-router.post("/addUser", async (req, res, next) => {
+router.post("/addUser", authMiddleware, async (req, res, next) => {
   try {
-    const success = checkInternalToken(req);
-    if (!success) {
-      res.status(401).send({ status: "Unauthorized" });
-      return;
-    }
-
     const { discord_code, redirect_uri, guilds } = req.body;
     if (discord_code == undefined || redirect_uri == undefined) {
       return res
@@ -168,14 +140,8 @@ router.post("/addUser", async (req, res, next) => {
   }
 });
 
-router.get("/userGuilds", async (req, res, next) => {
+router.get("/userGuilds", authMiddleware, async (req, res, next) => {
   try {
-    const success = checkInternalToken(req);
-    if (!success) {
-      res.status(401).send({ status: "Unauthorized" });
-      return;
-    }
-
     const { user_id } = req.query;
     if (user_id == undefined) {
       return res.status(400).send({ message: "user_id not provided!" });
@@ -209,13 +175,8 @@ router.get("/userGuilds", async (req, res, next) => {
   }
 });
 
-router.get("/guildMember", async (req, res, next) => {
+router.get("/guildMember", authMiddleware, async (req, res, next) => {
   try {
-    const success = checkInternalToken(req);
-    if (!success) {
-      res.status(401).send({ status: "Unauthorized" });
-      return;
-    }
     const { guild_id, user_discord_id } = req.query;
     if (guild_id == undefined || user_discord_id == undefined) {
       return res.status(400).send();
@@ -231,13 +192,8 @@ router.get("/guildMember", async (req, res, next) => {
   }
 });
 
-router.get("/userDetail", async (req, res, next) => {
+router.get("/userDetail", authMiddleware, async (req, res, next) => {
   try {
-    const success = checkInternalToken(req);
-    if (!success) {
-      return res.status(401).send({ status: "Unauthorized" });
-    }
-
     const { error, user } = await getDiscordUserFromId(req.query.user_id);
     if (error) {
       return res.status(400).send({ error });
