@@ -6,12 +6,26 @@ const {
   getUserGuilds,
   getUserGuildMember,
   refreshAccessToken,
-  // getUserFromDb,
+  getAccessToken
 } = require("../utils/discordApi");
 
 const { authMiddleware } = require("../middlewares/auth");
 
 const router = express.Router();
+
+router.get("/userAccessToken", authMiddleware, async (req, res, next) => {
+  const { grant_code, redirect_uri } = req.query;
+  try {
+    const { data, error } = await getAccessToken(grant_code, redirect_uri);
+    if (error) {
+      return res.status(400).send({ message: error.message });
+    }
+    return res.status(200).send(data)
+  } catch (err) {
+    next(err)
+    apm.captureError(err)
+  }
+});
 
 router.get("/isGuildMember", authMiddleware, async (req, res, next) => {
   const { accessToken, refreshToken, guild_id } = req.query;
