@@ -6,7 +6,8 @@ const {
   getUserGuilds,
   getUserGuildMember,
   refreshAccessToken,
-  getAccessToken
+  getAccessToken,
+  getDiscordUserFromToken,
 } = require("../utils/discordApi");
 
 const { authMiddleware } = require("../middlewares/auth");
@@ -16,14 +17,20 @@ const router = express.Router();
 router.get("/userAccessToken", authMiddleware, async (req, res, next) => {
   const { grant_code, redirect_uri } = req.query;
   try {
-    const { data, error } = await getAccessToken(grant_code, redirect_uri);
-    if (error) {
-      return res.status(400).send({ message: error.message });
+    const tokenRes = await getAccessToken(grant_code, redirect_uri);
+    if (tokenRes.error) {
+      return res.status(400).send({ message: tokenRes.error.message });
     }
-    return res.status(200).send(data)
+
+    const userRes = await getDiscordUserFromToken(tokenRes.data?.access_token);
+    if (userRes.error) {
+      return res.status(400).send({ message: userRes.error.message });
+    }
+
+    return res.status(200).send({ ...tokenRes.data, ...userRes.data });
   } catch (err) {
-    next(err)
-    apm.captureError(err)
+    next(err);
+    apm.captureError(err);
   }
 });
 
@@ -33,8 +40,8 @@ router.get("/isGuildMember", authMiddleware, async (req, res, next) => {
     newRefreshToken,
     member = false;
 
-  console.log("accessToken", accessToken)
-  console.log("refreshToken", refreshToken)
+  console.log("accessToken", accessToken);
+  console.log("refreshToken", refreshToken);
 
   try {
     // const user = await getUserFromDb(user_id);
@@ -80,8 +87,8 @@ router.get("/checkRole", authMiddleware, async (req, res, next) => {
     newRefreshToken,
     role = false;
 
-  console.log("accessToken", accessToken)
-  console.log("refreshToken", refreshToken)
+  console.log("accessToken", accessToken);
+  console.log("refreshToken", refreshToken);
 
   try {
     // const user = await getUserFromDb(user_id);
@@ -89,10 +96,7 @@ router.get("/checkRole", authMiddleware, async (req, res, next) => {
     //   return res.status(404).send({ message: "User not found!" });
     // }
 
-    let userGuildMemberRes = await getUserGuildMember(
-      accessToken,
-      guild_id
-    );
+    let userGuildMemberRes = await getUserGuildMember(accessToken, guild_id);
 
     if (userGuildMemberRes.error) {
       if (userGuildMemberRes.status == 401) {
