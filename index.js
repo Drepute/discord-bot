@@ -27,6 +27,7 @@ db.sequelize.sync({
 });
 
 app.use(cors({ origin: "*" }));
+app.use(express.json());
 app.use(BASE_PATH, mainRoute);
 app.use(`${BASE_PATH}/adapter`, adapterRoute);
 
