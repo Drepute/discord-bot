@@ -6,7 +6,7 @@ const lambda = new AWS.Lambda({ region: "us-east-1" });
 const axios = require("axios");
 const { Op, QueryTypes } = require("sequelize");
 const { ethers } = require("ethers");
-const { ChannelType } = require("discord.js")
+const { ChannelType } = require("discord.js");
 
 const { directMintTxFnc } = require("./gassLessTnx/index");
 const {
@@ -20,7 +20,32 @@ const api = require("../constants/api");
 
 const { apm } = require("../index");
 
-const ADMIN_PRIVATE_KEY_NAME = "ADMIN_PRIVATE_KEY";
+// const ADMIN_PRIVATE_KEY_NAME = "ADMIN_PRIVATE_KEY";
+const FUNC_ROUTED_EVENT_SIG =
+  "0x3b8298a2da8761c86c51c361b8a65b9f7c7219d917e3bde452b3ddb850dc5d22";
+
+const getRpcUrl = async (network) => {
+  const rpcCreds = await getSecretValue("rpc_urls");
+  const rpcUrl = {
+    test: rpcCreds["ALCHEMY_POLYGON_MUMBAI"],
+    main: rpcCreds["ALCHEMY_POLYGON_MAIN"],
+  };
+  return rpcUrl[network];
+};
+
+const waitForTxn = async (txnHash, network) => {
+  let receipt = None;
+  try {
+    const rpcUrl = await getRpcUrl(network);
+    const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+    receipt = await provider.waitForTransaction(txnHash, 1);
+    // console.log("RECEIPT", JSON.stringify(receipt));
+  } catch (err) {
+    console.log("ERROR: waitForTxn", err.message);
+  }
+
+  return receipt;
+};
 
 const getTrackableChannels = async (guild) => {
   // list of event with channelId with active event
@@ -283,12 +308,17 @@ const postEventProcess = async (eventId) => {
       });
     }
 
-    if (!uploadBadgeDetail) {
+    if (!uploadBadgeDetail || !("metadata" in uploadBadgeDetail)) {
+      console.info("uploadBadgeDetail", uploadBadgeDetail);
       console.error(
         `[participation badge][uploadBadge] Badge could not be uploaded! EVENT: ${JSON.stringify(
           event
         )}`
       );
+      const err = new Error("UploadBadgeDetail is invalid!");
+      apm.captureError(err, {
+        custom: { uploadBadgeDetail: JSON.stringify(uploadBadgeDetail) },
+      });
       return null;
     }
   }
@@ -501,10 +531,36 @@ const postEventProcess = async (eventId) => {
         });
       }
 
-      if (!status) {
+      const txnHash = response.transactionHash;
+      if (!status || !txnHash) {
         console.error(
           `[postEventProcess][run-txn-func] Transaction failed`,
           JSON.stringify(response)
+        );
+        continue;
+      }
+
+      const txnReceipt = await waitForTxn(txnHash, chain);
+      if (!txnReceipt) {
+        console.error(
+          `[postEventProcess][run-txn-func] Could not retrieve txn receipt!`
+        );
+        continue;
+      }
+
+      const logs = !txnReceipt.logs ? [] : txnReceipt.logs;
+      let eventFired = false;
+      for (let item of logs) {
+        const sig = item.topics[0];
+        if (sig === FUNC_ROUTED_EVENT_SIG) {
+          eventFired = true;
+          break;
+        }
+      }
+
+      if (!eventFired) {
+        console.error(
+          `[postEventProcess][run-txn-func] Biconomy FUNC_ROUTED_EVENT did not fire! [LOGS_LEN: ${logs.length}]`
         );
         continue;
       }
