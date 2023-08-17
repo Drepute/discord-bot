@@ -34,7 +34,7 @@ const getRpcUrl = async (network) => {
 };
 
 const waitForTxn = async (txnHash, network) => {
-  let receipt = None;
+  let receipt = null;
   try {
     const rpcUrl = await getRpcUrl(network);
     const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
