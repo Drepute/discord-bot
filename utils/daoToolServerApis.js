@@ -1,8 +1,8 @@
 require("dotenv").config();
+
 const api = require("../constants/api");
 const apiClient = require("./apiClient");
-
-const { apm } = require("../index");
+const apm = require("../apm");
 
 // const removeMapping = async (guildId) => {
 //   try {

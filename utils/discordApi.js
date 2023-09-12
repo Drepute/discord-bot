@@ -62,7 +62,7 @@ const refreshAccessToken = async (refreshToken) => {
     let err;
     if (error.response) {
       // Request made and server responded
-      err = `data:${JSON.stringify(error.response.data)}, status:${
+      err = `${JSON.stringify(error.response.data)}, status:${
         error.response.status
       }`;
     } else if (error.request) {
@@ -181,7 +181,7 @@ const getAccessToken = async (
     let err;
     if (error.response) {
       // Request made and server responded
-      err = `data:${JSON.stringify(error.response.data)}, status:${
+      err = `${JSON.stringify(error.response.data)}, status:${
         error.response.status
       }`;
     } else if (error.request) {
@@ -214,7 +214,7 @@ const getDiscordUserFromToken = async (accessToken) => {
     let err;
     if (error.response) {
       // Request made and server responded
-      err = `data:${JSON.stringify(error.response.data)}, status:${
+      err = `${JSON.stringify(error.response.data)}, status:${
         error.response.status
       }`;
     } else if (error.request) {
@@ -232,7 +232,7 @@ const getDiscordUserFromToken = async (accessToken) => {
   return response;
 };
 
-const getUserGuilds = async (accessToken) => {
+const getUserGuilds = async (accessToken, filter = true) => {
   const response = { guilds: null, error: null, status: null };
   const headers = { Authorization: `Bearer ${accessToken}` };
   const IMAGE_BASE_URL = "https://cdn.discordapp.com";
@@ -244,18 +244,24 @@ const getUserGuilds = async (accessToken) => {
     //   console.log(item.id, item.name, convertPerms(item.permissions));
     // }
 
-    const guilds = guildRes.data
-      .filter(
+    let guilds = [];
+    if (filter) {
+      guilds = guildRes.data.filter(
         (item) => item.owner || convertPerms(item.permissions).ADMINISTRATOR
-      )
-      .map((item) =>
-        item.icon
-          ? {
-              ...item,
-              icon: `${IMAGE_BASE_URL}/icons/${item.id}/${item.icon}.webp`,
-            }
-          : item
       );
+    } else {
+      guilds = guildRes.data;
+    }
+
+    guilds = guilds.map((item) =>
+      item.icon
+        ? {
+            ...item,
+            icon: `${IMAGE_BASE_URL}/icons/${item.id}/${item.icon}.webp`,
+          }
+        : item
+    );
+
     // console.info("[/getUserGuilds] Guilds", guilds);
     response["guilds"] = guilds;
     response["status"] = guildRes.status;
@@ -263,7 +269,7 @@ const getUserGuilds = async (accessToken) => {
     let err;
     if (error.response) {
       // Request made and server responded
-      err = `data:${JSON.stringify(error.response.data)}, status:${
+      err = `${JSON.stringify(error.response.data)}, status:${
         error.response.status
       }`;
       response["status"] = error.response.status;
@@ -291,6 +297,37 @@ const getGuildRoles = async (GUILD_ID) => {
   } catch (error) {
     console.error("[getGuildRoles]", error);
     response.error = error;
+  }
+
+  return response;
+};
+
+const getUserGuildMember = async (accessToken, GUILD_ID) => {
+  const response = { member: null, error: null, status: null };
+  const headers = { Authorization: `Bearer ${accessToken}` };
+  try {
+    const url = `https://discord.com/api/users/@me/guilds/${GUILD_ID}/member`;
+    const res = await axios.get(url, { headers: headers });
+    response["member"] = res.data;
+    response["status"] = res.status;
+  } catch (error) {
+    let err;
+    if (error.response) {
+      // Request made and server responded
+      err = `${JSON.stringify(error.response.data)}, status:${
+        error.response.status
+      }`;
+      response["status"] = error.response.status;
+    } else if (error.request) {
+      // The request was made but no response was received
+      err = `error.request: ${error.request}`;
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      err = `error.message: ${error.message}`;
+    }
+    console.error(err);
+    response["error"] = new Error(err);
+    return response;
   }
 
   return response;
@@ -344,4 +381,5 @@ module.exports = {
   getUserFromDb,
   getDiscordUserFromToken,
   addUserToDb,
+  getUserGuildMember,
 };
