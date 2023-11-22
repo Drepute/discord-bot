@@ -1,5 +1,6 @@
 const api = {
   BASE_URL: process.env.BASE_URL,
+  BASE_URL_V2: process.env.BASE_URL_V2,
   ROUTES: {
     createContribution: "/contrib",
     isDaoRegistered: "/discord/is_dao_registered",
@@ -21,6 +22,7 @@ const api = {
   ARWEAVE_SERVER_URL: process.env.ARWEAVE_SERVER_URL,
   // ALCHEMY_MATIC_MAINNET: process.env.ALCHEMY_MATIC_MAINNET,
   POLYGON_API_KEY: process.env.POLYGON_API_KEY,
+  INTERNAL_TOKEN: process.env.INTERNAL_TOKEN,
 };
 
 module.exports = api;

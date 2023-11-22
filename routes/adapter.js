@@ -10,6 +10,8 @@ const {
   getDiscordUserFromToken,
 } = require("../utils/discordApi");
 
+const { updateIdentity } = require("../utils/v2Apis");
+
 const { authMiddleware } = require("../middlewares/auth");
 
 const router = express.Router();
@@ -35,7 +37,7 @@ router.get("/userAccessToken", authMiddleware, async (req, res, next) => {
 });
 
 router.get("/isGuildMember", authMiddleware, async (req, res, next) => {
-  const { accessToken, refreshToken, guild_id } = req.query;
+  const { uuid, accessToken, refreshToken, guild_id } = req.query;
   let newAccessToken,
     newRefreshToken,
     member = false;
@@ -50,6 +52,7 @@ router.get("/isGuildMember", authMiddleware, async (req, res, next) => {
     // }
 
     let userGuildsRes = await getUserGuilds(accessToken, false);
+
     if (userGuildsRes.error) {
       if (userGuildsRes.status == 401) {
         const refreshRes = await refreshAccessToken(refreshToken);
@@ -58,6 +61,14 @@ router.get("/isGuildMember", authMiddleware, async (req, res, next) => {
         }
         newAccessToken = refreshRes.data.access_token;
         newRefreshToken = refreshRes.data.refresh_token;
+        const updateIdentityBody = {
+          access_token: newAccessToken,
+          refresh_token: newRefreshToken,
+        };
+        const updateIdentityRes = await updateIdentity(
+          uuid,
+          updateIdentityBody
+        );
         userGuildsRes = await getUserGuilds(newAccessToken, false);
       } else {
         return res
@@ -82,7 +93,7 @@ router.get("/isGuildMember", authMiddleware, async (req, res, next) => {
 });
 
 router.get("/checkRole", authMiddleware, async (req, res, next) => {
-  const { accessToken, refreshToken, guild_id, role_id } = req.query;
+  const { uuid, accessToken, refreshToken, guild_id, role_id } = req.query;
   let newAccessToken,
     newRefreshToken,
     role = false;
@@ -106,6 +117,14 @@ router.get("/checkRole", authMiddleware, async (req, res, next) => {
         }
         newAccessToken = refreshRes.data.access_token;
         newRefreshToken = refreshRes.data.refresh_token;
+        const updateIdentityBody = {
+          access_token: newAccessToken,
+          refresh_token: newRefreshToken,
+        };
+        const updateIdentityRes = await updateIdentity(
+          uuid,
+          updateIdentityBody
+        );
         userGuildMemberRes = await getUserGuildMember(newAccessToken, guild_id);
       } else {
         return res
