@@ -1,0 +1,27 @@
+---
+version: '3.9'
+services:
+  discord-bot-server:
+    container_name: discord-bot-server
+    image: discord-bot
+    volumes: [../discord-bot:/app, /app/node_modules]
+    environment:
+      - DB_HOST=mysql
+      - BASE_URL=http://dao-tool-server:5000/dao_tool_server
+      - BASE_URL_V2=http://rep3-backend:5000/v2
+      - DAO_TOOL_BASE_URL=http://192.168.1.34:4000
+      - LAMBDA_URL=https://kjb6q8pwh1.execute-api.us-east-1.amazonaws.com/Prod
+      - DISCORD_REDIRECT_URI=http://discord-bot-server:3002/discord_bot/discordRedirect
+      - ARWEAVE_SERVER_URL=http://ipfs-upload-server:3000/arweave_server
+    env_file: .env
+    entrypoint: yarn run dev
+    ports: [3002:3002]
+    healthcheck:
+      test: curl --fail -s http://localhost:3002/discord_bot/ping || exit 1
+      interval: 30s
+      timeout: 1s
+      retries: 1
+    networks: [service_mesh]
+networks:
+  service_mesh:
+    external: true
